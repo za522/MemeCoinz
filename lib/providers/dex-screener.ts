@@ -30,7 +30,7 @@ function invalidFrom<T>(
   };
 }
 
-function normalizeProfile(value: unknown): DexTokenProfile | null {
+export function normalizeDexTokenProfile(value: unknown): DexTokenProfile | null {
   if (!isRecord(value)) return null;
   const tokenAddress = asString(value.tokenAddress);
   const chainId = asString(value.chainId);
@@ -87,7 +87,7 @@ function tokenIdentity(value: unknown) {
   };
 }
 
-function normalizePair(value: unknown): DexPairSnapshot | null {
+export function normalizeDexPair(value: unknown): DexPairSnapshot | null {
   if (!isRecord(value)) return null;
   const pairAddress = asString(value.pairAddress);
   const chainId = asString(value.chainId);
@@ -187,7 +187,7 @@ async function getDexPairs(
   return {
     ...result,
     data: result.data.flatMap((pair) => {
-      const normalized = normalizePair(pair);
+      const normalized = normalizeDexPair(pair);
       return normalized ? [normalized] : [];
     }).slice(0, 20),
   };
@@ -289,7 +289,7 @@ export async function getDexScreenerTokensBatch(
   return {
     ...result,
     data: result.data.flatMap((pair) => {
-      const normalized = normalizePair(pair);
+      const normalized = normalizeDexPair(pair);
       return normalized ? [normalized] : [];
     }),
   };
@@ -309,7 +309,7 @@ export async function getLatestDexTokenProfiles(): Promise<
   return {
     ...result,
     data: result.data.flatMap((profile) => {
-      const normalized = normalizeProfile(profile);
+      const normalized = normalizeDexTokenProfile(profile);
       return normalized ? [normalized] : [];
     }),
   };

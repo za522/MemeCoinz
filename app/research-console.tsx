@@ -15,6 +15,7 @@ import type {
   CoinListItem,
   CoinsListResponse,
 } from "@/lib/coins/types";
+import { loadBrowserDexFallback } from "@/lib/ingestion/browser-fallback";
 import type { ReferenceClock } from "@/lib/model";
 import type { CoinResearchResponse } from "@/lib/research-pipeline";
 import {
@@ -159,6 +160,66 @@ function stageLabel(coin: CoinListItem) {
   if (coin.lifecycle.stage === "graduated") return "Graduated";
   if (coin.lifecycle.stage === "pool") return "DEX pool";
   return "Stage unknown";
+}
+
+function mergeCoinForDisplay(
+  current: CoinListItem | null,
+  incoming: CoinListItem,
+): CoinListItem {
+  if (!current || current.mint !== incoming.mint) return incoming;
+  const provenance = [...current.provenance];
+  for (const record of incoming.provenance) {
+    const duplicate = provenance.some((candidate) =>
+      candidate.sourceId === record.sourceId &&
+      candidate.role === record.role &&
+      candidate.retrievedAt === record.retrievedAt
+    );
+    if (!duplicate) provenance.push(record);
+  }
+  const missing = [...incoming.missing];
+  for (const item of current.missing) {
+    if (!missing.some((candidate) => candidate.field === item.field && candidate.reason === item.reason)) {
+      missing.push(item);
+    }
+  }
+  return {
+    ...incoming,
+    name: incoming.name ?? current.name,
+    symbol: incoming.symbol ?? current.symbol,
+    imageUri: incoming.imageUri ?? current.imageUri,
+    metadataUri: incoming.metadataUri ?? current.metadataUri,
+    creator: incoming.creator ?? current.creator,
+    createdAt: incoming.createdAt ?? current.createdAt,
+    createdSlot: incoming.createdSlot ?? current.createdSlot,
+    creationSignature: incoming.creationSignature ?? current.creationSignature,
+    canonicalConfirmed: incoming.canonicalConfirmed || current.canonicalConfirmed,
+    lifecycle: {
+      venue: incoming.lifecycle.venue === "unknown"
+        ? current.lifecycle.venue
+        : incoming.lifecycle.venue,
+      stage: incoming.lifecycle.stage === "unknown"
+        ? current.lifecycle.stage
+        : incoming.lifecycle.stage,
+      graduatedAt: incoming.lifecycle.graduatedAt ?? current.lifecycle.graduatedAt,
+      poolAddress: incoming.lifecycle.poolAddress ?? current.lifecycle.poolAddress,
+    },
+    market: {
+      priceUsd: incoming.market.priceUsd ?? current.market.priceUsd,
+      marketCapUsd: incoming.market.marketCapUsd ?? current.market.marketCapUsd,
+      liquidityUsd: incoming.market.liquidityUsd ?? current.market.liquidityUsd,
+      volume24hUsd: incoming.market.volume24hUsd ?? current.market.volume24hUsd,
+      buys24h: incoming.market.buys24h ?? current.market.buys24h,
+      sells24h: incoming.market.sells24h ?? current.market.sells24h,
+      priceChange24hPct:
+        incoming.market.priceChange24hPct ?? current.market.priceChange24hPct,
+      pairAddress: incoming.market.pairAddress ?? current.market.pairAddress,
+      dexId: incoming.market.dexId ?? current.market.dexId,
+      pairCreatedAt: incoming.market.pairCreatedAt ?? current.market.pairCreatedAt,
+      observedAt: incoming.market.observedAt ?? current.market.observedAt,
+    },
+    provenance,
+    missing,
+  };
 }
 
 function matchingDexPair(
@@ -1190,16 +1251,42 @@ export function ResearchConsole({
       });
       const body = await response.json() as CoinsListResponse & { error?: string; message?: string };
       if (!response.ok) throw new Error(body.message ?? body.error ?? "Coin discovery request failed.");
+      let resolvedBody: CoinsListResponse = body;
+      if (body.coins.length === 0) {
+        try {
+          resolvedBody = await loadBrowserDexFallback({
+            limit: 30,
+            serverWarnings: body.ingestion.warnings,
+          });
+        } catch (fallbackError) {
+          const fallbackMessage = fallbackError instanceof Error
+            ? fallbackError.message
+            : "The browser-direct public fallback failed.";
+          resolvedBody = {
+            ...body,
+            ingestion: {
+              ...body.ingestion,
+              warnings: [...new Set([
+                ...body.ingestion.warnings,
+                `Browser-direct DEX fallback unavailable: ${fallbackMessage}`,
+              ])],
+            },
+          };
+        }
+      }
       setFeed((current) => {
-        if (!append || !current) return body;
+        if (!append || !current) return resolvedBody;
         const byMint = new Map(current.coins.map((coin) => [coin.mint, coin]));
-        body.coins.forEach((coin) => byMint.set(coin.mint, coin));
+        resolvedBody.coins.forEach((coin) => byMint.set(coin.mint, coin));
         return {
-          ...body,
+          ...resolvedBody,
           coins: [...byMint.values()],
           ingestion: {
-            ...body.ingestion,
-            warnings: [...new Set([...current.ingestion.warnings, ...body.ingestion.warnings])],
+            ...resolvedBody.ingestion,
+            warnings: [...new Set([
+              ...current.ingestion.warnings,
+              ...resolvedBody.ingestion.warnings,
+            ])],
           },
         };
       });
@@ -1235,7 +1322,7 @@ export function ResearchConsole({
       if (!response.ok) throw new Error(body.message ?? body.error ?? "Coin report request failed.");
       if (researchRequestId.current !== requestId) return;
       setCoinResearch(body);
-      setSelectedCoin(body.coin);
+      setSelectedCoin((current) => mergeCoinForDisplay(current, body.coin));
     } catch (error) {
       if (researchRequestId.current !== requestId) return;
       setCoinResearch(null);
@@ -1363,6 +1450,7 @@ export function ResearchConsole({
   }
 
   const connectedCount = registry?.sources.filter((source) => source.status.state === "connected").length ?? 0;
+  const liveFeedCount = feed?.coins.length ?? 0;
 
   return (
     <div className="app-shell">
@@ -1389,7 +1477,13 @@ export function ResearchConsole({
         </nav>
         <div className="header-evidence" aria-label="Source check summary">
           <span className={connectedCount > 0 ? "online" : "checking"} aria-hidden="true" />
-          {registryLoading ? "Checking sources" : `${connectedCount} public checks passed`}
+          {registryLoading
+            ? "Checking sources"
+            : connectedCount > 0
+              ? `${connectedCount} public checks passed`
+              : liveFeedCount > 0
+                ? `${liveFeedCount} live rows via public fallback`
+                : "0 public checks passed"}
         </div>
       </header>
 
@@ -1419,7 +1513,9 @@ export function ResearchConsole({
         {screen === "report" ? (
           selectedMint || selectedCoin || coinResearchLoading || coinResearchError ? (
             <DiscoveredCoinReport
-              coin={coinResearch?.coin ?? selectedCoin}
+              coin={coinResearch
+                ? mergeCoinForDisplay(selectedCoin, coinResearch.coin)
+                : selectedCoin}
               cutoff={cutoff}
               error={coinResearchError}
               onBack={backToCoins}

@@ -28,6 +28,15 @@ export const GLOSSARY_CATEGORIES: Array<"All" | GlossaryCategory> = [
 export const RELEASE_NOTES = [
   {
     date: "28 Aug 2026",
+    title: "Hosted live-feed recovery",
+    items: [
+      "Added a credential-free browser fallback to DEX Screener's public latest-profile and current-pair endpoints when the server returns no coins.",
+      "Fallback rows are real current Pump-like tokens, but remain visibly partial, promoted, unpersisted, and excluded from model training.",
+      "Kept the Coin report on the same real mint while showing unavailable point-in-time evidence instead of replacing it with a score.",
+    ],
+  },
+  {
+    date: "28 Aug 2026",
     title: "Real feed and point-in-time research pipeline",
     items: [
       "Replaced the synthetic-first home screen with a real bounded Pump/PumpSwap feed, exact instruction decoding, cursors, and honest fallback coverage.",

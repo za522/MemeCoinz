@@ -201,7 +201,7 @@ No external UI runtime is adopted for release 0.4.0. Existing React, semantic HT
 
 ## Performance evidence and budget
 
-The 0.3.0 production baseline was approximately 139,968 bytes gzip across the comparable client assets (135,076 JavaScript + 4,892 CSS), with a 24,015-byte gzip research-console chunk. A clean 0.4.0 build on 28 August 2026 measured 143,844 bytes gzip (138,117 JavaScript + 5,727 CSS); the research-console chunk measured 26,544 bytes. This is a recorded 3,876-byte gzip (+2.8%) cost for the real feed/report client behavior, not a performance improvement.
+The 0.3.0 production baseline was approximately 139,968 bytes gzip across the comparable client assets (135,076 JavaScript + 4,892 CSS), with a 24,015-byte gzip research-console chunk. A clean 0.4.0 build on 28 August 2026 measured 143,844 bytes gzip (138,117 JavaScript + 5,727 CSS); the research-console chunk measured 26,544 bytes. The 0.4.1 hosted-feed recovery build measured 147,229 bytes gzip (141,521 JavaScript + 5,708 CSS), with a 29,868-byte research-console chunk. That is a recorded 7,261-byte gzip (+5.2%) cost over 0.3.0, not a performance improvement.
 
 - No unexplained build-tool oversized-bundle warning.
 - No horizontal page overflow at 320px.

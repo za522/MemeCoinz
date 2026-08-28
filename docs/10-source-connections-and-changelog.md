@@ -6,7 +6,7 @@
 ## What was implemented
 
 1. **Real coin feed:** bounded Pump and PumpSwap signature scans through Solana JSON-RPC, exact official-instruction decoding, current market enrichment, continuation cursors, and explicit partial-coverage warnings.
-2. **Fallback discovery:** optional Solana Tracker latest-token rows and, only when the combined canonical/vendor/stored set is too small, DEX Screener latest paid profiles. The DEX fallback is labelled selection-biased.
+2. **Fallback discovery:** optional Solana Tracker latest-token rows and, only when the combined canonical/vendor/stored set is too small, DEX Screener latest paid profiles. If the host returns no rows because its public egress is unavailable, the browser may call DEX Screener's CORS-enabled profile/pair endpoints directly. Both DEX paths are labelled selection-biased; browser-direct rows are read-only and never training data.
 3. **Real coin detail:** bounded recent mint transactions plus current supply, largest token accounts, priority-fee samples, DEX market data, Jupiter price, provenance, missing reasons, and conditional D1 persistence.
 4. **Advanced per-token collection:** public GET is status-only; authenticated POST runs bounded Helius, Solana Tracker, X, Jupiter quote, and Jito context collectors. Metered branches also require an explicit cost gate and provider key.
 5. **Historical path:** an admin-protected, bounded archive backfill route that requires a separate archive RPC and never pretends public live RPC is complete history.
@@ -21,7 +21,7 @@
 |---|---|---|
 | **Solana** | The canonical ledger where transactions, balances, slots, and program instructions exist | Primary source for Pump/PumpSwap discovery and bounded per-mint history |
 | **Pump.fun / PumpSwap** | The launch protocol, bonding curve, graduation path, and AMM programs | Official program IDs/IDL discriminators are decoded through Solana; consumer pages are not scraped |
-| **DEX Screener** | A market-data index/scanner for pools, prices, liquidity, activity, token profiles, and paid promotions | Current market enrichment; latest paid profiles are only a partial fallback, never the full launch denominator |
+| **DEX Screener** | A market-data index/scanner for pools, prices, liquidity, activity, token profiles, and paid promotions | Current market enrichment; latest paid profiles are only a partial fallback, never the full launch denominator; credential-free browser-direct recovery is allowed only when the server feed is empty and is not persisted |
 | **Solana Tracker** | A commercial indexed data vendor and terminal | Optional latest-token discovery plus bounded trades, holders/chart, bundler/risk, and deployer-history adapters when the cost gate and key are installed; MemeScope is a product surface, not canonical evidence |
 | **Photon MemeScope** | A trading/discovery interface | Manual product reference only; no supported licensed ingestion is configured |
 | **Fomo.family** | A consumer discovery/trading interface | Manual product reference only; published restrictions rule out unsupported automation |
@@ -83,6 +83,8 @@ ingestion { requestedSource, discoverySources[], coverage[], storage, warnings[]
 ```
 
 `coverage[]` exposes signatures scanned, transactions requested/decoded, exact creates/migrations found, newest/oldest event time, partial state, error code, and missing reason. Header: `X-Research-Data: real-live-and-stored-observations`.
+
+If this server response contains zero coins, the client may make two credential-free CORS requests to DEX Screener (`/token-profiles/latest/v1` and `/tokens/v1/solana/{mints}`). Any recovered rows explicitly replace the response coverage with a browser-direct, promoted-subset warning and `storage.state = read-only`; no browser row becomes a canonical launch, persisted observation, or model example.
 
 ### `GET /api/coins/{mint}?historyLimit=100`
 

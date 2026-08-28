@@ -47,6 +47,7 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - Use **Explore live coins** as the current task heading. Launch tracking is the research goal, but the current bounded/paid-profile mix is not complete enough to call every returned row a newly observed launch.
 - Treat the feed as **recent discovery from bounded requests**, not a complete list of every launch. Show the active discovery sources, scan counts, oldest/newest event times, continuation state, and warnings.
 - Prefer exact Pump/PumpSwap create events decoded from Solana. When that bounded scan returns no usable launches, a DEX Screener paid-profile feed may supply a clearly labelled, biased fallback; an authorized Solana Tracker key may accelerate discovery.
+- If a deployed host cannot reach public providers and returns no coins, a credential-free browser request to DEX Screener's public profile/pair endpoints may recover real current rows. Mark them as browser-direct, unpersisted, selection-biased, noncanonical, and ineligible for training.
 - Allow local filtering by exact mint, name, ticker, and lifecycle stage. Ticker matching is navigation only, never identity proof; every report is keyed by the exact mint.
 - Keep observed market/flow fields separate from calculated research fields. A missing value is **Unavailable**, never zero.
 - Do not show a synthetic coin as the default result, a winner-only list, or an implied recommendation.

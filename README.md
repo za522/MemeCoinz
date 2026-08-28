@@ -7,7 +7,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 ## What is implemented
 
 - Exactly three top-level screens: **Coins**, **Coin report**, and **Data & methods**.
-- A request-driven real coin feed using bounded Solana Pump/PumpSwap scans, optional Solana Tracker discovery, stored D1 rows, and a clearly labelled DEX Screener paid-profile fallback.
+- A request-driven real coin feed using bounded Solana Pump/PumpSwap scans, optional Solana Tracker discovery, stored D1 rows, and a clearly labelled DEX Screener paid-profile fallback. If the host cannot reach public providers and returns no rows, the browser may call DEX Screener's public CORS-enabled profile/pair endpoints directly; that fallback uses no credential and is never a training cohort.
 - Exact Pump `create`/`createV2`, Pump `migrate`, and PumpSwap `createPool` discriminator matching from the official public IDLs. Transactions that merely touch a program are not called launches.
 - Current market enrichment from DEX Screener pair snapshots and Jupiter Price v3.
 - Real per-mint detail collection from recent Solana transactions, token supply, largest token accounts, and recent priority-fee samples, with explicit history bounds and reconstruction limits.
@@ -29,6 +29,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 
 - The live feed is bounded and request-driven, not a complete denominator or always-on collector.
 - DEX Screener latest profiles are a paid-profile, selection-biased fallback rather than all Pump launches.
+- Browser-direct fallback rows are current and real but are not written to D1; refreshing or opening the same mint later does not create historical coverage.
 - No complete historical cohort has been established and no model is currently demonstrated as trained or validated.
 - No scheduler or current collector builds full `execution_path` sequences over the outcome horizon, so the manual materializer does not by itself create a usable cohort.
 - No Helius, Solana Tracker, X, or production Jupiter credential is installed in the current local environment.

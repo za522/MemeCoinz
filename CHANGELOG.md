@@ -4,6 +4,13 @@ User-visible project changes are recorded here.
 
 ## Unreleased
 
+## 0.4.1 · 2026-08-28
+
+- Added a credential-free, browser-direct DEX Screener fallback when the deployed server cannot reach public providers and therefore returns no coins.
+- The fallback uses only public CORS-enabled latest-profile and current-pair endpoints, sends no authorization header, and keeps its rows selection-biased, noncanonical, read-only, and excluded from model training.
+- Preserved the selected real coin identity and current market fields when its server-side point-in-time report correctly returns insufficient data.
+- A clean 0.4.1 production build measured 147,229 bytes gzip across comparable client assets (141,521 JavaScript + 5,708 CSS), 3,385 bytes above 0.4.0 and 7,261 bytes (+5.2%) above the 0.3.0 baseline. The research-console chunk measured 29,868 bytes gzip.
+
 ## 0.4.0 · 2026-08-28
 
 ### Added

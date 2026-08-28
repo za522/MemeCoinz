@@ -2,7 +2,7 @@
 
 Release 0.4.0 adds a real coin feed and real report states without installing an external UI runtime. Native tables, forms, buttons, status regions, and disclosures fit the current tasks, preserve the established forensic-daylight language, and avoid implying precision through decorative charts. The protected manual pipeline and optional Telegram runner are operational interfaces, not a fourth product screen, browser setting, scheduler, or trading control.
 
-The 0.3.0 production build is the comparison baseline. A clean 0.4.0 build on 28 August 2026 measured 143,844 bytes gzip across the comparable client assets (138,117 JavaScript + 5,727 CSS), 2.8% above the prior 139,968-byte baseline. The increase accompanies the real feed/report client behavior; it is recorded as a cost, not described as an improvement.
+The 0.3.0 production build is the comparison baseline. A clean 0.4.0 build on 28 August 2026 measured 143,844 bytes gzip across the comparable client assets (138,117 JavaScript + 5,727 CSS), 2.8% above the prior 139,968-byte baseline. The 0.4.1 hosted-feed recovery build measured 147,229 bytes gzip (141,521 JavaScript + 5,708 CSS), 5.2% above 0.3.0. These increases accompany real feed/report behavior and are recorded as costs, not described as improvements.
 
 ## Component intake
 
@@ -37,6 +37,8 @@ No third-party UI component or package was installed for release 0.4.0.
 - Prior 0.3.0 research-console chunk: approximately 24,015 bytes gzip.
 - Release 0.4.0 comparable client assets: 143,844 bytes gzip (138,117 JavaScript + 5,727 CSS).
 - Release 0.4.0 research-console chunk: 26,544 bytes gzip, up from 24,015 bytes.
+- Release 0.4.1 comparable client assets: 147,229 bytes gzip (141,521 JavaScript + 5,708 CSS).
+- Release 0.4.1 research-console chunk: 29,868 bytes gzip.
 - Change versus the 0.3.0 comparable total: +3,876 bytes gzip (+2.8%).
 - Structural gate: feed responses are capped at 100 rows; external images reserve dimensions and lazy-load; no chart, grid, animation, or component runtime was added.
 
