@@ -4,6 +4,7 @@ import {
   OBSERVED_STATUS,
 } from "./constants";
 import type { CohortImportRow } from "./types";
+import type { CohortFeatureImportRow } from "./types";
 
 function finiteInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
@@ -103,6 +104,73 @@ export function parseCohortImportRows(value: unknown): {
       observedGraduationAtMs: graduationAt as number | null,
       observedGraduationMinutes: graduationMinutes as number | null,
     });
+  }
+  return { rows, error: null };
+}
+
+const boundedNumber = (value: unknown, minimum: number, maximum: number): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value >= minimum && value <= maximum;
+
+export function parseCohortFeatureRows(value: unknown): {
+  rows: CohortFeatureImportRow[];
+  error: string | null;
+} {
+  if (!Array.isArray(value) || value.length < 1 || value.length > COHORT_IMPORT_BATCH_LIMIT) {
+    return { rows: [], error: `rows must contain 1–${COHORT_IMPORT_BATCH_LIMIT} records.` };
+  }
+  const rows: CohortFeatureImportRow[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < value.length; index += 1) {
+    const candidate = value[index];
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      return { rows: [], error: `rows[${index}] must be an object.` };
+    }
+    const row = candidate as Record<string, unknown>;
+    if (!isSolanaMint(row.mint) || seen.has(row.mint)) {
+      return { rows: [], error: `rows[${index}].mint is invalid or duplicated.` };
+    }
+    seen.add(row.mint);
+    for (const field of ["featureSetVersion", "normalizedName", "normalizedSymbol", "narrativeTheme"] as const) {
+      if (typeof row[field] !== "string" || row[field].length > 256) {
+        return { rows: [], error: `rows[${index}].${field} is invalid.` };
+      }
+    }
+    if (!Array.isArray(row.narrativeTokens) || row.narrativeTokens.length > 32 || row.narrativeTokens.some(
+      (token) => typeof token !== "string" || token.length > 64,
+    )) {
+      return { rows: [], error: `rows[${index}].narrativeTokens is invalid.` };
+    }
+    for (const field of [
+      "themeConfidence0To100",
+      "metadataCompleteness0To100",
+      "narrativeNovelty0To100",
+      "copyPressure0To100",
+    ] as const) {
+      if (!boundedNumber(row[field], 0, 100)) {
+        return { rows: [], error: `rows[${index}].${field} must be from 0 to 100.` };
+      }
+    }
+    for (const field of [
+      "socialLinkCount",
+      "nameReusePrior24h",
+      "symbolReusePrior24h",
+      "themeLaunchesPrior1h",
+      "themeLaunchesPrior24h",
+      "launchesPrior5m",
+      "launchesPrior1h",
+      "observationLagMs",
+    ] as const) {
+      if (!finiteInteger(row[field]) || row[field] < 0) {
+        return { rows: [], error: `rows[${index}].${field} must be a non-negative integer.` };
+      }
+    }
+    if (row.themeMomentumRatio !== null && !boundedNumber(row.themeMomentumRatio, 0, 1000)) {
+      return { rows: [], error: `rows[${index}].themeMomentumRatio is invalid.` };
+    }
+    if (typeof row.computedAt !== "string" || !Number.isFinite(Date.parse(row.computedAt))) {
+      return { rows: [], error: `rows[${index}].computedAt is invalid.` };
+    }
+    rows.push(row as unknown as CohortFeatureImportRow);
   }
   return { rows, error: null };
 }

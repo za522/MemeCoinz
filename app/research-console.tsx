@@ -552,7 +552,11 @@ function CoinFeedTable({
                     <td>{coin.research ? `${formatCutoffSeconds(coin.research.cutoffSeconds)} ${coin.research.referenceClock}` : "Not calculated"}</td>
                     <td>{coin.research?.status === "predicted" && coin.research.probability !== null ? formatPct(coin.research.probability * 100) : <span className="data-pending">Not trained</span>}</td>
                     <td>{coin.research?.coordinationEvidence0To100 === null || coin.research?.coordinationEvidence0To100 === undefined ? <span className="data-pending">Unavailable</span> : `${formatNumber(coin.research.coordinationEvidence0To100, 0)} / 100`}</td>
-                    <td>{coin.research?.roundTripRetentionPct === null || coin.research?.roundTripRetentionPct === undefined ? "Unavailable" : formatPct(coin.research.roundTripRetentionPct)}</td>
+                    <td>{coin.research?.roundTripRetentionPct !== null && coin.research?.roundTripRetentionPct !== undefined
+                      ? formatPct(coin.research.roundTripRetentionPct)
+                      : coin.research?.grossRoundTripRetentionPct !== null && coin.research?.grossRoundTripRetentionPct !== undefined
+                        ? `${formatPct(coin.research.grossRoundTripRetentionPct)} before network fee`
+                        : "Unavailable"}</td>
                   </>
                 ) : null}
                 <td><button className="table-action" onClick={() => onOpen(coin)} type="button">Open</button></td>
@@ -569,6 +573,10 @@ function historicalStatusLabel(status: CohortObservedStatus) {
   if (status === "confirmed-fast-graduation") return "Confirmed fast graduation";
   if (status === "right-censored") return "Outcome unknown after feed loss";
   return "No published outcome";
+}
+
+function featureDimensionLabel(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function HistoricalCohortView({
@@ -591,6 +599,7 @@ function HistoricalCohortView({
   const rows = cohort?.launches ?? [];
   const counts = cohort?.dataset.counts;
   const ready = cohort?.dataset.status === "ready";
+  const [columnGroup, setColumnGroup] = useState<"basic" | "calculated">("calculated");
 
   return (
     <>
@@ -623,7 +632,32 @@ function HistoricalCohortView({
             <div><dt>Outcome unknown</dt><dd>{formatNumber(counts?.rightCensored, 0)}</dd></div>
             <div><dt>No outcome row</dt><dd>{formatNumber(counts?.withoutPublishedOutcome, 0)}</dd></div>
           </dl>
+          <p className="feed-message">
+            Calculated features: {formatNumber(cohort?.calculatedCoverage.rows, 0)} of {formatNumber(counts?.launches, 0)} launches
+            {cohort?.calculatedCoverage.status === "complete" ? " (complete)." : "."}
+          </p>
           <p className="feed-message">“Outcome unknown” is not a failure. The source stopped seeing most launches after roughly 2.77 minutes.</p>
+          {cohort.featureAssociations.rows.length ? (
+            <details className="method-detail">
+              <summary>Which feature buckets had more observed fast graduations?</summary>
+              <p>{cohort.featureAssociations.method}</p>
+              <div className="table-scroll" role="region" aria-label="Top descriptive feature associations">
+                <table>
+                  <thead><tr><th>Feature</th><th>Bucket</th><th>Launches</th><th>Observed fast graduation</th></tr></thead>
+                  <tbody>
+                    {cohort.featureAssociations.rows.map((row) => (
+                      <tr key={`${row.dimension}:${row.bucket}`}>
+                        <td>{featureDimensionLabel(row.dimension)}</td>
+                        <td>{row.bucket}</td>
+                        <td>{formatNumber(row.launches, 0)}</td>
+                        <td>{formatPct(row.lowerBoundRatePct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ) : null}
         </section>
       ) : null}
 
@@ -649,6 +683,13 @@ function HistoricalCohortView({
               ))}
             </div>
           </div>
+          <div>
+            <span className="control-label">Columns</span>
+            <div className="compact-segments" role="group" aria-label="Choose historical columns">
+              <button aria-pressed={columnGroup === "basic"} onClick={() => setColumnGroup("basic")} type="button">Basic</button>
+              <button aria-pressed={columnGroup === "calculated"} onClick={() => setColumnGroup("calculated")} type="button">Calculated</button>
+            </div>
+          </div>
         </div>
 
         <div aria-live="polite" className="feed-message">
@@ -663,7 +704,11 @@ function HistoricalCohortView({
             <table className="coin-table">
               <caption>Real published launch records. A missing or censored outcome is not a loss.</caption>
               <thead>
-                <tr><th>Coin</th><th>Launched</th><th>Initial cap</th><th>Links present</th><th>Observed result</th></tr>
+                {columnGroup === "basic" ? (
+                  <tr><th>Coin</th><th>Launched</th><th>Initial cap</th><th>Links present</th><th>Observed result</th></tr>
+                ) : (
+                  <tr><th>Coin</th><th>Theme</th><th>Novelty</th><th>Copy pressure</th><th>Launches in prior hour</th><th>Metadata</th></tr>
+                )}
               </thead>
               <tbody>
                 {rows.map((row) => (
@@ -677,14 +722,28 @@ function HistoricalCohortView({
                         </div>
                       </div>
                     </td>
-                    <td>{formatTime(row.createdAt)}</td>
-                    <td>{row.initialMarketCapSol === null ? "Unavailable" : `${formatNumber(row.initialMarketCapSol, 2)} SOL`}</td>
-                    <td>{[
-                      row.hasX ? "X" : null,
-                      row.hasWebsite ? "Website" : null,
-                      row.hasTelegram ? "Telegram" : null,
-                    ].filter(Boolean).join(", ") || "None recorded"}</td>
-                    <td>{historicalStatusLabel(row.observedStatus)}</td>
+                    {columnGroup === "basic" ? (
+                      <>
+                        <td>{formatTime(row.createdAt)}</td>
+                        <td>{row.initialMarketCapSol === null ? "Unavailable" : `${formatNumber(row.initialMarketCapSol, 2)} SOL`}</td>
+                        <td>{[
+                          row.hasX ? "X" : null,
+                          row.hasWebsite ? "Website" : null,
+                          row.hasTelegram ? "Telegram" : null,
+                        ].filter(Boolean).join(", ") || "None recorded"}</td>
+                        <td>{historicalStatusLabel(row.observedStatus)}</td>
+                      </>
+                    ) : row.calculated ? (
+                      <>
+                        <td><strong className="metric-name">{row.calculated.narrativeTheme}</strong><small>{row.calculated.narrativeTokens.join(", ") || "No taxonomy match"}</small></td>
+                        <td>{formatNumber(row.calculated.narrativeNovelty0To100, 0)} / 100</td>
+                        <td>{formatNumber(row.calculated.copyPressure0To100, 0)} / 100</td>
+                        <td>{formatNumber(row.calculated.launchesPrior1h, 0)}</td>
+                        <td>{formatNumber(row.calculated.metadataCompleteness0To100, 0)} / 100</td>
+                      </>
+                    ) : (
+                      <td colSpan={5}><span className="data-pending">Not calculated</span></td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -1051,8 +1110,16 @@ function DiscoveredCoinReport({
             </article>
             <article>
               <span>Tradability</span>
-              <strong>{executionProbe?.roundTripRetentionPct === null || executionProbe?.roundTripRetentionPct === undefined ? "Unavailable" : formatPct(executionProbe.roundTripRetentionPct)}</strong>
-              <p>{executionProbe ? `${formatUsd(executionProbe.orderSizeUsd)} reconstructed round-trip retention.` : "No cutoff-aligned buy and sell quote pair."}</p>
+              <strong>{executionProbe?.roundTripRetentionPct !== null && executionProbe?.roundTripRetentionPct !== undefined
+                ? formatPct(executionProbe.roundTripRetentionPct)
+                : executionProbe?.grossRoundTripRetentionPct !== null && executionProbe?.grossRoundTripRetentionPct !== undefined
+                  ? formatPct(executionProbe.grossRoundTripRetentionPct)
+                  : "Unavailable"}</strong>
+              <p>{executionProbe?.roundTripRetentionPct !== null && executionProbe?.roundTripRetentionPct !== undefined
+                ? `${formatUsd(executionProbe.orderSizeUsd)} round-trip retention after recorded fees.`
+                : executionProbe?.grossRoundTripRetentionPct !== null && executionProbe?.grossRoundTripRetentionPct !== undefined
+                  ? `${formatUsd(executionProbe.orderSizeUsd)} quote retention before unknown network fee.`
+                  : "No cutoff-aligned usable buy and sell quote pair."}</p>
             </article>
             <article>
               <span>Evidence quality</span>

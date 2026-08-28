@@ -253,6 +253,18 @@ The app can import [RED-PUMP-2026-v1 v1.4](https://zenodo.org/records/21923106),
 
 This is real historical data, but it is not the final supervised-learning cohort. The publisher repeatedly polled a rolling top-50 endpoint, giving a median visibility window of about 2.77 minutes. Its 1,651 `GRADUATED` rows are confirmed fast-regime events. Its 831,290 `TIMEOUT` rows are right-censored after visibility loss and are never converted into failures or negative profit labels. Another 27,253 launches have no published outcome row. The corpus contains launch metadata/social-presence flags, not full transaction paths, wallet graphs, historical X text, size-specific route histories, or executable returns.
 
+### Calculated historical layer
+
+`scripts/materialize_cohort_features.py` processes all 860,194 launches in chronological batches. For every launch it stores a versioned metadata/narrative theme, matching terms and confidence, metadata completeness, social-link count, exact name/symbol reuse over the preceding 24 hours, total and theme-specific launch rates, narrative novelty, copy pressure, and observation lag. Every rolling value uses only rows with a strictly earlier observation timestamp; simultaneous rows do not see one another.
+
+The same job writes 60 descriptive association rows across narrative theme, social-link count, metadata completeness, novelty, copy pressure, reuse, launch rate, and observation lag. The displayed rate is `confirmed fast graduations / all launches in the feature band`. Because timeout and missing outcomes remain in that denominator, this is a conservative lower-bound association, not a failure rate, causal effect, feature importance, executable-return estimate, or model validation result.
+
+### Free direct collector
+
+`npm run collect:free -- --mode both --watch` runs a credential-free operator collector. It queries the configured public Solana RPC for official Pump program signatures, fetches transactions sequentially within published public limits, accepts only exact supported instruction discriminators, enriches confirmed mints through public DEX Screener and Jupiter reads, optionally requests bounded mint history, and posts at most 100 coins / 5,000 observations / 5 MB to protected `POST /api/coins/ingest`. Archive continuation is checkpointed under `.research/`; metered providers, alerts, wallet signing, and transaction submission are absent.
+
+Verified local runs persisted two canonical launches and 28 real observations: two launch records, four DEX market snapshots, four Jupiter price snapshots, and 18 size-specific Jupiter execution quotes. The point-in-time pipeline materialized six elapsed launch snapshots. This proves the free path functions end to end. It does not prove historical completeness, continuous hosted operation, profitable labels, or an edge. Public Solana RPC has no archive-completeness or production SLA, and the watcher stops when its operator process stops.
+
 ## Historical data: what is and is not recoverable
 
 - Chain events, block time, token balances, transfers, fees, and signatures can often be backfilled if an archive RPC retains them.
@@ -283,8 +295,8 @@ Every persisted observation keeps source, type, `eventAt`, `observedAt`, `availa
 
 ## Required next data work
 
-1. Configure a licensed archive RPC, run bounded backfill windows, reconcile create/migrate counts, and publish cohort completeness by time range.
-2. Run a durable prospective collector so actual arrival time, failures, provider health, and source disagreement are recorded continuously.
+1. Continue the free checkpointed public-RPC backfill, reconcile create/migrate counts page by page, and publish coverage by time range. Add a licensed archive RPC only when public retention/rate limits create measured gaps.
+2. Operate the free watcher prospectively and add durable hosted scheduling so actual arrival time, failures, provider health, and source disagreement survive terminal restarts.
 3. Configure licensed Helius, Tracker, and X access only after quota/retention/redistribution review; reconcile indexed events against canonical chain facts.
 4. Add owner resolution, classified funders, exact slot order, recurring cohort/synchronized-exit features, and false-link exclusions for exchanges/popular bots.
 5. Schedule current Jupiter quote pairs at registered cutoffs/outcome samples and licensed X identity-matched capture prospectively; then add narrative embeddings and manipulation/authenticity features.

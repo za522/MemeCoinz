@@ -795,13 +795,19 @@ function quoteObservation(
   };
 }
 
-function jupiterObservations(
-  provider: CollectionProviderResult<JupiterRoundTripProbe[]>,
+export function jupiterProbeObservations(
+  probes: JupiterRoundTripProbe[],
 ): CoinObservation[] {
-  return (provider.data ?? []).flatMap((probe) => [
+  return probes.flatMap((probe) => [
     quoteObservation(probe, "buy"),
     quoteObservation(probe, "sell"),
   ].filter((observation): observation is CoinObservation => observation !== null));
+}
+
+function jupiterQuoteObservations(
+  provider: CollectionProviderResult<JupiterRoundTripProbe[]>,
+): CoinObservation[] {
+  return jupiterProbeObservations(provider.data ?? []);
 }
 
 function jitoObservations(
@@ -926,7 +932,7 @@ export async function collectTokenResearchInputs(
     ...trackerTradeObservations(mint, solanaTracker, helius),
     ...trackerSnapshotObservations(mint, solanaTracker),
     ...xObservations(mint, x),
-    ...jupiterObservations(jupiter),
+    ...jupiterQuoteObservations(jupiter),
     ...jitoObservations(mint, jito),
   ]);
   const persistence = options.persistCoin

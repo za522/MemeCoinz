@@ -258,6 +258,7 @@ export function derivePointInTimeFeatures(
       timestamp(count.bucketEnd) <= cutoffMs &&
       count.identityClasses.length > 0,
   );
+  const metadataNarrative = usableAt(input.metadataNarrative ?? [], cutoffMs, launchMs);
   const paidAttention = usableAt(input.paidAttention, cutoffMs, launchMs);
   const regimes = usableAt(input.regimes, cutoffMs);
 
@@ -370,16 +371,17 @@ export function derivePointInTimeFeatures(
       sell?.networkAndPriorityFeeUsd !== null && sell?.networkAndPriorityFeeUsd !== undefined
         ? buy.networkAndPriorityFeeUsd + sell.networkAndPriorityFeeUsd
         : null;
-    const retention =
+    const grossRetention =
       buy?.routeAvailable &&
       sell?.routeAvailable &&
       buy.expectedValueUsd !== null &&
-      sell.expectedValueUsd !== null &&
-      totalFees !== null
-        ? ((buy.expectedValueUsd / orderSizeUsd) * sell.expectedValueUsd - totalFees) /
-          orderSizeUsd *
-          100
+      sell.expectedValueUsd !== null
+        ? ((buy.expectedValueUsd / orderSizeUsd) * sell.expectedValueUsd) /
+          orderSizeUsd * 100
         : null;
+    const retention = grossRetention === null || totalFees === null
+      ? null
+      : grossRetention - (totalFees / orderSizeUsd) * 100;
     const latencies = [buy?.latencyMs, sell?.latencyMs].filter(
       (value): value is number => value !== null && value !== undefined,
     );
@@ -389,6 +391,8 @@ export function derivePointInTimeFeatures(
       sellRouteAvailable: sell?.routeAvailable ?? null,
       buyPriceImpactPct: buy?.priceImpactPct ?? null,
       sellPriceImpactPct: sell?.priceImpactPct ?? null,
+      grossRoundTripRetentionPct:
+        grossRetention === null ? null : round(grossRetention),
       roundTripRetentionPct: retention === null ? null : round(retention),
       totalFeesUsd: totalFees === null ? null : round(totalFees),
       quoteLatencyMs: latencies.length ? round(sum(latencies) / latencies.length, 2) : null,
@@ -635,7 +639,12 @@ export function derivePointInTimeFeatures(
       )
       .map((count) => count.postCount),
   );
+  const latestMetadataNarrative = latest(metadataNarrative);
   const narrativePaidAttention = {
+    metadataTheme: latestMetadataNarrative?.theme ?? null,
+    metadataThemeConfidence0To100: latestMetadataNarrative?.themeConfidence0To100 ?? null,
+    metadataCompleteness0To100: latestMetadataNarrative?.metadataCompleteness0To100 ?? null,
+    metadataSocialLinkCount: latestMetadataNarrative?.socialLinkCount ?? null,
     postCount: hasEnumeratedPosts
       ? nullableCount(socialPosts, narrativeCoverage.status)
       : null,
@@ -741,7 +750,7 @@ export function derivePointInTimeFeatures(
     liquidityExecution: [...markets, ...quotes],
     ownershipCreator: [...holders, ...creators],
     coordinationWash: [...trades, ...transfers, ...coordinationProxies],
-    narrativePaidAttention: [...socialPosts, ...socialCounts, ...paidAttention],
+    narrativePaidAttention: [...metadataNarrative, ...socialPosts, ...socialCounts, ...paidAttention],
     marketRegime: regimes,
   };
   const missingByFamily: Record<FeatureFamily, string[]> = {

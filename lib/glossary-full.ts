@@ -71,6 +71,31 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     whyItMatters: "Versioned formulas make scores reproducible and let researchers audit exactly what changed.",
   },
   {
+    term: "Metadata narrative",
+    definition: "A deterministic theme inferred only from a token's launch name, symbol, and metadata URI. It is a useful free proxy, not public sentiment or proof that people are discussing the token.",
+    category: "Narrative",
+  },
+  {
+    term: "Narrative novelty",
+    definition: "How uncommon a token's metadata theme is relative to themes observed before that launch. High novelty means less common in the earlier cohort, not better.",
+    category: "Narrative",
+  },
+  {
+    term: "Copy pressure",
+    definition: "A versioned score combining recent theme crowding and prior reuse of the exact name or ticker. It estimates imitation pressure but cannot prove copying or coordinated control.",
+    category: "Narrative",
+  },
+  {
+    term: "Lower-bound association",
+    definition: "Confirmed positive outcomes divided by every row in a feature band while unknown or censored rows remain in the denominator. It is deliberately conservative and is not a causal effect or profit probability.",
+    category: "Research",
+  },
+  {
+    term: "Direct collector bridge",
+    definition: "A protected local ingestion boundary that accepts validated normalized evidence from an operator process able to reach public providers. It does not weaken authentication, authorize paid APIs, or submit trades.",
+    category: "Data",
+  },
+  {
     term: "Dataset / model version",
     definition: "An immutable identifier for the exact records, definitions, code, and trained parameters used in a result, allowing it to be reproduced later.",
     category: "Data",

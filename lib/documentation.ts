@@ -28,12 +28,13 @@ export const GLOSSARY_CATEGORIES: Array<"All" | GlossaryCategory> = [
 export const RELEASE_NOTES = [
   {
     date: "29 Aug 2026",
-    title: "First broad historical launch cohort",
+    title: "Free historical and live research layer",
     items: [
       "Added the corrected RED-PUMP-2026-v1 corpus as a separate historical dataset: 860,194 unique Pump launches observed from 8 May to 10 June 2026.",
-      "The source files are hash-verified and privately archived; the compact launch index is paginated rather than mounted all at once.",
+      "Calculated chronology-safe metadata/narrative features for every launch and added descriptive feature associations against confirmed fast graduation.",
+      "Added a free direct collector for exact Pump events plus public DEX Screener/Jupiter evidence, checkpointed archive continuation, and optional watch mode.",
       "Kept 831,290 TIMEOUT records right-censored and visibly distinct from losses. Only 1,651 fast graduations are confirmed by this source.",
-      "This establishes launch scale, not a profitability model: transaction paths, wallet graphs, narrative history, executable exits, and valid negative labels still require separate collection.",
+      "At the 28 August 2026 verification checkpoint, free local passes had persisted two canonical launches, 51 observations including 37 execution quotes, and nine elapsed snapshots. The watcher keeps appending evidence; no complete outcome cohort, trained model, or trading edge is claimed.",
     ],
   },
   {

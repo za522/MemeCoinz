@@ -438,6 +438,52 @@ test("partial holder counts and one-sided quotes remain explicit prerequisites",
   assert.equal(result.features?.ownershipCreator.holderCount, 123);
 });
 
+test("a later provider transport failure does not erase an earlier usable quote pair", () => {
+  const source = detail();
+  source.observations.push(
+    observation("buy-quote", "execution_quote", 50, 50, {
+      side: "buy",
+      orderSizeUsd: 100,
+      routeAvailable: true,
+      priceImpactPct: 1,
+      networkAndPriorityFeeUsd: null,
+      expectedValueUsd: 100,
+      latencyMs: 40,
+      failureCode: null,
+    }, { sourceId: "jupiter", fidelity: "market-derived" }),
+    observation("sell-quote", "execution_quote", 51, 51, {
+      side: "sell",
+      orderSizeUsd: 100,
+      routeAvailable: true,
+      priceImpactPct: 2,
+      networkAndPriorityFeeUsd: null,
+      expectedValueUsd: 92,
+      latencyMs: 45,
+      failureCode: null,
+    }, { sourceId: "jupiter", fidelity: "market-derived" }),
+    observation("network-failure", "execution_quote", 55, 55, {
+      side: "buy",
+      orderSizeUsd: 100,
+      routeAvailable: false,
+      priceImpactPct: null,
+      networkAndPriorityFeeUsd: null,
+      expectedValueUsd: null,
+      latencyMs: 0,
+      failureCode: "network_error",
+    }, { sourceId: "jupiter", fidelity: "market-derived" }),
+  );
+  const result = buildCoinResearchResponse(source, {
+    referenceClock: "launch",
+    cutoffSeconds: 60,
+    evaluatedAt: at(7_200),
+    orderSizeUsd: 100,
+  });
+  assert.equal(result.features?.liquidityExecution.probes[0]?.buyRouteAvailable, true);
+  assert.equal(result.features?.liquidityExecution.probes[0]?.sellRouteAvailable, true);
+  assert.equal(result.features?.liquidityExecution.probes[0]?.grossRoundTripRetentionPct, 92);
+  assert.equal(result.features?.liquidityExecution.probes[0]?.roundTripRetentionPct, null);
+});
+
 test("missing graduation returns an explicit HTTP-ready insufficient-data envelope", () => {
   const source = detail();
   assert.throws(

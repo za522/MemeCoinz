@@ -361,6 +361,25 @@ test("ticker-only social matches are excluded and partial sentiment stays explic
   assert.equal(narrative.influentialAuthorMentionCount, 2);
 });
 
+test("launch metadata narrative is calculated without pretending social sentiment exists", () => {
+  const input = baseInput();
+  input.coverage[4] = { family: "narrativePaidAttention", status: "partial" };
+  input.metadataNarrative = [{
+    ...evidence("metadata", 0),
+    theme: "animal",
+    matchedTokens: ["cat"],
+    themeConfidence0To100: 100,
+    metadataCompleteness0To100: 65,
+    socialLinkCount: null,
+  }];
+  const narrative = derivePointInTimeFeatures(input, 30).narrativePaidAttention;
+  assert.equal(narrative.metadataTheme, "animal");
+  assert.equal(narrative.metadataCompleteness0To100, 65);
+  assert.equal(narrative.metadataSocialLinkCount, null);
+  assert.equal(narrative.postCount, null);
+  assert.equal(narrative.sentimentMean, null);
+});
+
 test("indexed coordination and exact-identity count proxies stay separate from raw evidence", () => {
   const input = baseInput();
   input.coverage[3] = { family: "coordinationWash", status: "partial" };

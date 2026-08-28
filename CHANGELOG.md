@@ -9,7 +9,14 @@ User-visible project changes are recorded here.
 - Added an unlinked private operator upload surface so an authenticated owner can stream the frozen files into an owner-only deployment without making the site public.
 - Split Coins into two plain dataset choices, **Live now** and **Historical cohort**, so a user can see the real stored denominator without confusing it with the bounded current feed.
 - Preserved the publisher's v1.4 correction: 1,651 observed fast graduations are positive evidence, while 831,290 `TIMEOUT` rows are right-censored—not failures, 24-hour outcomes, or valid negative model labels.
-- The cohort adds real scale and a denominator but not transaction histories, complete price paths, wallet graphs, historical narrative text, or executable profit labels; no trained edge is claimed.
+- Kept 27,253 launches without a published outcome explicitly unknown instead of coercing them into the right-censored class.
+- Preserved two sub-second source clock discrepancies in the normalized archive while clamping app-facing availability to the on-chain creation time, so no feature can appear available before launch.
+- Calculated chronology-safe metadata/narrative features for all 860,194 rows: theme, classifier confidence, metadata completeness, social links, name/symbol reuse, theme and total launch rates, novelty, copy pressure, and observation lag.
+- Added 60 descriptive cohort association rows spanning narrative, metadata, novelty, copy pressure, reuse, launch rate, and lag. Rates use confirmed fast graduation as a lower-bound outcome and keep censored/unknown rows in the denominator.
+- Added a free direct collector with live/archive modes, checkpointed public Solana RPC scanning, exact Pump decoding, public DEX Screener/Jupiter enrichment, protected bounded ingestion, and optional watch mode.
+- Verified local free-source passes that persisted two canonical Pump launches, 28 real observations (including 18 size-specific execution quotes), and six elapsed point-in-time snapshots. This is an operational proof, not population coverage or predictive validation.
+- Preserved confirmed canonical asset fields monotonically and rehydrated stored market observations when a runtime cannot currently reach upstream providers.
+- The cohort adds real scale, calculated metadata/narrative research, and descriptive associations but not transaction histories, complete price paths, wallet graphs, historical social text, or executable profit labels; no trained edge is claimed.
 
 ## 0.4.1 · 2026-08-28
 

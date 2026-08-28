@@ -11,6 +11,7 @@ import {
   type HolderSnapshot,
   type MarketObservation,
   type MarketRegimeObservation,
+  type MetadataNarrativeObservation,
   type PaidAttentionObservation,
   type PointInTimeInput,
   type QuoteObservation,
@@ -20,6 +21,7 @@ import {
   type TradeObservation,
   type TransferObservation,
 } from "@/lib/features";
+import { classifyMetadataNarrative } from "@/lib/narrative/metadata";
 import type { CoinDetailResponse, CoinFidelity, CoinObservation } from "@/lib/coins/types";
 import type {
   FeatureFamily as ModelFeatureFamily,
@@ -346,9 +348,14 @@ function parseQuote(observation: EligibleObservation): QuoteObservation | null {
   const side = value.side;
   const orderSizeUsd = asFiniteNumber(value.orderSizeUsd);
   const routeAvailable = asBoolean(value.routeAvailable);
+  const failureCode = asString(value.failureCode);
   if ((side !== "buy" && side !== "sell") || orderSizeUsd === null || routeAvailable === null) {
     return null;
   }
+  // A provider transport/response failure is missing evidence, not proof that
+  // the market had no route. Preserve explicit `no_route` as a real negative
+  // observation and exclude infrastructure failures from route features.
+  if (!routeAvailable && failureCode && failureCode !== "no_route") return null;
   return {
     ...evidence(observation),
     side,
@@ -386,6 +393,31 @@ function parseSocial(observation: EligibleObservation): SocialPostObservation | 
     engagementCount: asFiniteNumber(value.engagementCount),
     narrativeClusterId: asString(value.narrativeClusterId),
     narrativeNovelty0To100: asFiniteNumber(value.narrativeNovelty0To100),
+  };
+}
+
+function parseMetadataNarrative(
+  observation: EligibleObservation,
+): MetadataNarrativeObservation | null {
+  if (normalizedType(observation) !== "pump_launch") return null;
+  const name = asString(observation.normalized.name);
+  const symbol = asString(observation.normalized.symbol);
+  if (!name && !symbol) return null;
+  const classified = classifyMetadataNarrative({
+    name,
+    symbol,
+    descriptionLength: 0,
+    hasX: false,
+    hasWebsite: false,
+    hasTelegram: false,
+  });
+  return {
+    ...evidence(observation),
+    theme: classified.narrativeTheme,
+    matchedTokens: classified.narrativeTokens,
+    themeConfidence0To100: classified.themeConfidence0To100,
+    metadataCompleteness0To100: classified.metadataCompleteness0To100,
+    socialLinkCount: null,
   };
 }
 
@@ -467,7 +499,8 @@ function mappedRecordCount(input: PointInTimeInput): number {
   return input.market.length + input.trades.length + input.transfers.length +
     (input.coordinationProxies?.length ?? 0) + input.holders.length +
     input.creators.length + input.quotes.length + input.socialPosts.length +
-    (input.socialCounts?.length ?? 0) + input.paidAttention.length + input.regimes.length;
+    (input.socialCounts?.length ?? 0) + (input.metadataNarrative?.length ?? 0) +
+    input.paidAttention.length + input.regimes.length;
 }
 
 export function adaptCoinDetailToPointInTime(
@@ -509,6 +542,7 @@ export function adaptCoinDetailToPointInTime(
       quotes: 0,
       socialPosts: 0,
       socialCounts: 0,
+      metadataNarrative: 0,
       paidAttention: 0,
       regimes: 0,
     },
@@ -582,6 +616,7 @@ export function adaptCoinDetailToPointInTime(
     quotes: [],
     socialPosts: [],
     socialCounts: [],
+    metadataNarrative: [],
     paidAttention: [],
     regimes: [],
   };
@@ -596,6 +631,7 @@ export function adaptCoinDetailToPointInTime(
     const quote = parseQuote(observation);
     const social = parseSocial(observation);
     const socialCount = parseSocialCount(observation);
+    const metadataNarrative = parseMetadataNarrative(observation);
     const paid = parsePaidAttention(observation);
     const regime = parseRegime(observation);
     if (market) input.market.push(market);
@@ -607,6 +643,7 @@ export function adaptCoinDetailToPointInTime(
     if (quote) input.quotes.push(quote);
     if (social) input.socialPosts.push(social);
     if (socialCount) input.socialCounts!.push(socialCount);
+    if (metadataNarrative) input.metadataNarrative!.push(metadataNarrative);
     if (paid) input.paidAttention.push(paid);
     if (regime) input.regimes.push(regime);
     if (![
@@ -619,6 +656,7 @@ export function adaptCoinDetailToPointInTime(
       quote,
       social,
       socialCount,
+      metadataNarrative,
       paid,
       regime,
     ].some(Boolean)) {
@@ -637,6 +675,7 @@ export function adaptCoinDetailToPointInTime(
     quotes: input.quotes.length,
     socialPosts: input.socialPosts.length,
     socialCounts: input.socialCounts!.length,
+    metadataNarrative: input.metadataNarrative!.length,
     paidAttention: input.paidAttention.length,
     regimes: input.regimes.length,
   };
@@ -668,7 +707,7 @@ export function adaptCoinDetailToPointInTime(
     ),
     declaredCoverage(
       "narrativePaidAttention",
-      [...input.socialPosts, ...input.socialCounts!, ...input.paidAttention],
+      [...input.metadataNarrative!, ...input.socialPosts, ...input.socialCounts!, ...input.paidAttention],
       detail,
       ["Ticker-only posts are not accepted as coin identity evidence."],
     ),
@@ -1063,6 +1102,7 @@ export function buildMissingReferenceResponse(
       quotes: 0,
       socialPosts: 0,
       socialCounts: 0,
+      metadataNarrative: 0,
       paidAttention: 0,
       regimes: 0,
     },

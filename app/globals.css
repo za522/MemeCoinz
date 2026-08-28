@@ -1426,6 +1426,17 @@ td {
   vertical-align: middle;
 }
 
+.coin-table .metric-name,
+.coin-table td > small {
+  display: block;
+}
+
+.coin-table td > small {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .coin-table tbody tr {
   transition: background-color 160ms ease-out;
 }

@@ -59,6 +59,7 @@ export interface CoinResearchSummary {
   upperBound: number | null;
   modelVersion: string | null;
   coordinationEvidence0To100: number | null;
+  grossRoundTripRetentionPct: number | null;
   roundTripRetentionPct: number | null;
   evidenceCoveragePct: number | null;
 }

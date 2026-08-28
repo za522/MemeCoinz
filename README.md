@@ -24,18 +24,21 @@ It is not an automatic trader or evidence of a profitable strategy.
 - Protected persistence for immutable candidate/validated model artifacts, validated-only shadow predictions, and deduplicated alert-delivery records.
 - An optional Telegram shadow-alert runner that is disabled by default, thresholded, and unable to submit a trade.
 - A protected, idempotent importer for the corrected CC-BY-4.0 RED-PUMP-2026-v1 corpus: 860,194 unique launches, immutable source files in R2, and a compact browseable D1 index with censored outcomes kept distinct from losses.
+- Chronology-safe metadata/narrative features materialized for all 860,194 cohort rows, including theme, novelty, copy pressure, launch-rate context, name/symbol reuse, social-link count, metadata completeness, and observation lag.
+- Descriptive cohort associations for every calculated feature family, reported as confirmed-fast-graduation lower bounds with censored/unknown launches retained in the denominator.
+- A free direct collector (`npm run collect:free`) that scans official Pump activity through public Solana RPC, decodes only exact official instructions, enriches confirmed mints through public DEX Screener/Jupiter reads, checkpoints progress, persists bounded evidence, and can repeat in watch mode.
 - Server-only source registry and exact source/rights documentation.
 
 ## What is not yet claimed
 
-- The live feed is bounded and request-driven, not a complete denominator or always-on collector.
+- The live feed is bounded. The direct collector can run continuously in watch mode, but public RPC has no archive-completeness SLA and a terminal process is not a durable hosted scheduler.
 - DEX Screener latest profiles are a paid-profile, selection-biased fallback rather than all Pump launches.
 - Browser-direct fallback rows are current and real but are not written to D1; refreshing or opening the same mint later does not create historical coverage.
 - The RED-PUMP corpus is a broad launch cohort, but its rolling top-50 observer loses most launches after roughly 2.77 minutes. It confirms 1,651 fast graduations; its 831,290 `TIMEOUT` rows are right-censored, not failures, and cannot train the intended profit model as negative labels.
 - No complete transaction-level historical cohort with mature executable outcomes has been established, and no model is currently demonstrated as trained or validated.
 - No scheduler or current collector builds full `execution_path` sequences over the outcome horizon, so the manual materializer does not by itself create a usable cohort.
 - No Helius, Solana Tracker, X, or production Jupiter credential is installed in the current local environment.
-- The credentialed collector code therefore has no live local corpus or verified provider coverage; current Jupiter/Jito probes are still request-driven rather than continuous history.
+- The credentialed collector code therefore has no Helius/Tracker/X local corpus or verified provider coverage. The free collector has persisted a small real public-source corpus, but that does not imply paid-provider coverage or a complete cohort.
 - Narrative embeddings, owner-resolved holder graphs, complete common-funder/bundle evidence, and historical size-specific route quotes remain unavailable unless those exact observations are collected.
 - Telegram delivery is disabled and unconfigured in the current environment; without a real matured cohort and matching validated artifact, there are no eligible predictions to send.
 - No browser settings surface or background scheduler currently operates the alert runner.
@@ -51,6 +54,14 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+To begin free live plus best-effort archive collection after configuring `BACKFILL_ADMIN_TOKEN` and a public Solana RPC, run:
+
+```bash
+npm run collect:free -- --mode both --watch
+```
+
+The collector writes a checkpoint under `.research/`, never calls metered providers, and never signs or submits a trade. Stop it with `Ctrl+C`.
 
 ## Server configuration
 
@@ -91,8 +102,9 @@ Never use `NEXT_PUBLIC_` for provider, admin, or delivery secrets.
 |---|---|---|
 | `GET /api/coins` | Recent real coin feed; filters include `limit`, `cursor`, `source`, `status`, `q`, `minLiquidityUsd`, `minVolume24hUsd`, and `enrich` | Bounded discovery with source coverage and warnings; not all launches |
 | `GET /api/coins/{mint}?historyLimit=100` | Exact-mint current enrichment plus bounded recent ledger observations and storage state | Real current/bounded history; missing history remains explicit |
-| `GET /api/cohort/red-pump` | Browse the corrected published 860,194-launch cohort and inspect exact import/source status | Launch/social-metadata census plus confirmed fast graduations; `TIMEOUT` stays right-censored and is never a loss label |
-| `POST /api/cohort/import` | Admin-protected idempotent manifest, row-batch, and exact-count finalization actions | Frozen dataset identity/hashes/counts; at most 1,000 rows per request; no label reinterpretation |
+| `POST /api/coins/ingest` | Receive a bounded normalized batch from the free direct collector | Protected by `BACKFILL_ADMIN_TOKEN`; accepts only known sources and valid timestamps; never fetches, signs, or trades |
+| `GET /api/cohort/red-pump` | Browse the corrected published 860,194-launch cohort, its calculated features, aggregate associations, and exact import/source status | Launch/social-metadata census plus descriptive confirmed-fast-graduation lower bounds; `TIMEOUT` stays right-censored and is never a loss label |
+| `POST /api/cohort/import` | Admin-protected idempotent manifest, row-batch, calculated-feature-batch, and exact-count finalization actions | Frozen dataset identity/hashes/counts; at most 1,000 rows per request; no label reinterpretation |
 | `PUT /api/cohort/raw?filename=…` | Verify and privately archive either frozen source file in R2 | Exact filename, byte count, and SHA-256 required; no public raw-file response |
 | `POST /api/coins/backfill` | Admin-protected bounded archive scan and optional per-asset history collection | Requires `SOLANA_ARCHIVE_RPC_URL`, `BACKFILL_ADMIN_TOKEN`, and `x-backfill-token`; not an unbounded job runner |
 | `GET /api/collection/token` | Report collection-control configuration and the execution method | Status only: no provider request, quota use, or D1 write |
@@ -111,7 +123,7 @@ The exact research-route query parameters and response contract are documented i
 
 ## Persistence
 
-The Cloudflare D1 schema contains normalized `sources`, `assets`, `observations`, `feature_snapshots`, `outcomes`, `predictions`, `execution_probes`, `experiments`, `model_artifacts`, `alert_deliveries`, `cohort_imports`, and compact `cohort_launches`. The RED-PUMP importer stores verified raw gzip files privately in `RAW_RESEARCH` and only the browseable launch index in D1. Current request paths write assets/observations and eligible feature snapshots; the protected collector uses the same observation persistence path only when it resolves an existing coin row. The protected manual materializer can write a matured outcome only from a complete, exact-aligned `execution_path` already stored in D1; current Jupiter probes are ephemeral `execution_quote` rows, not that path. Protected research actions can persist immutable model artifacts, an exact validated artifact can write a shadow prediction, and the alert runner records one delivery state per prediction/channel. The manual pipeline orchestrates those same bounded writes and always stores trained artifacts as candidates; it adds no new fidelity, scheduler, or serving permission.
+The Cloudflare D1 schema contains normalized `sources`, `assets`, `observations`, `feature_snapshots`, `outcomes`, `predictions`, `execution_probes`, `experiments`, `model_artifacts`, `alert_deliveries`, `cohort_imports`, compact `cohort_launches`, `cohort_launch_features`, and `cohort_feature_aggregates`. The RED-PUMP importer stores verified raw gzip files privately in `RAW_RESEARCH`; its browseable launch index, calculated features, and descriptive associations live in D1. Current request paths write assets/observations and eligible feature snapshots; the direct collector uses a protected bounded ingestion route. Strong canonical fields are monotonic: a weaker fallback refresh cannot erase a confirmed creation signature or slot. The protected manual materializer can write a matured outcome only from a complete, exact-aligned `execution_path` already stored in D1; current Jupiter probes are ephemeral `execution_quote` rows, not that path. Protected research actions can persist immutable model artifacts, an exact validated artifact can write a shadow prediction, and the alert runner records one delivery state per prediction/channel. The manual pipeline orchestrates those same bounded writes and always stores trained artifacts as candidates; it adds no new fidelity, scheduler, or serving permission.
 
 Storage never increases source fidelity. Every observation retains its source, event/observation/availability/retrieval time, commitment/canonical state, signature/slot where available, normalized payload, and missing reason.
 

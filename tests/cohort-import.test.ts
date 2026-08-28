@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   COHORT_IMPORT_BATCH_LIMIT,
   RED_PUMP_DATASET,
+  parseCohortFeatureRows,
   parseCohortImportRows,
 } from "../lib/cohort/index";
 
@@ -66,4 +67,34 @@ test("batch size and exact 32-byte base58 mint are enforced", () => {
     /1–1000/,
   );
   assert.match(parseCohortImportRows([{ ...row, mint: "not-a-mint" }]).error ?? "", /base58/);
+});
+
+test("calculated cohort rows require bounded, versioned research features", () => {
+  const feature = {
+    mint,
+    featureSetVersion: "red-pump-metadata-v1",
+    normalizedName: "example",
+    normalizedSymbol: "ex",
+    narrativeTheme: "other",
+    narrativeTokens: [],
+    themeConfidence0To100: 20,
+    metadataCompleteness0To100: 75,
+    socialLinkCount: 2,
+    nameReusePrior24h: 0,
+    symbolReusePrior24h: 3,
+    themeLaunchesPrior1h: 12,
+    themeLaunchesPrior24h: 300,
+    themeMomentumRatio: 0.96,
+    launchesPrior5m: 54,
+    launchesPrior1h: 620,
+    narrativeNovelty0To100: 80,
+    copyPressure0To100: 16,
+    observationLagMs: 4_000,
+    computedAt: "2026-08-29T00:00:00.000Z",
+  };
+  assert.equal(parseCohortFeatureRows([feature]).error, null);
+  assert.match(
+    parseCohortFeatureRows([{ ...feature, narrativeNovelty0To100: 101 }]).error ?? "",
+    /0 to 100/,
+  );
 });

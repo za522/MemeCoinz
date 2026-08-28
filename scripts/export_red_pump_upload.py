@@ -31,7 +31,11 @@ def main() -> None:
             SELECT l.mint, l.created_at, l.seen_at, l.name, l.symbol,
                    l.initial_market_cap_sol, l.has_x, l.has_website,
                    l.has_telegram, l.description_length,
-                   COALESCE(CASE WHEN o.observed_graduated = 1 THEN 1 ELSE 0 END, -1),
+                   CASE
+                     WHEN o.mint IS NULL THEN -1
+                     WHEN o.observed_graduated = 1 THEN 1
+                     ELSE 0
+                   END,
                    CASE WHEN o.observed_graduated = 1 THEN o.observed_at ELSE NULL END,
                    CASE WHEN o.observed_graduated = 1
                         THEN o.minutes_to_observed_graduation ELSE NULL END
@@ -41,10 +45,16 @@ def main() -> None:
         """
         with gzip.open(args.output, "wt", encoding="utf-8", compresslevel=6) as output:
             for row in connection.execute(query):
+                created_at_ms = iso_to_ms(row[1])
+                raw_seen_at_ms = iso_to_ms(row[2])
+                if created_at_ms is None or raw_seen_at_ms is None:
+                    raise ValueError(f"Missing launch timestamp for {row[0]}")
                 value = {
                     "mint": row[0],
-                    "createdAtMs": iso_to_ms(row[1]),
-                    "seenAtMs": iso_to_ms(row[2]),
+                    "createdAtMs": created_at_ms,
+                    # Availability cannot precede the on-chain creation event.
+                    # The normalized SQLite database retains the raw source time.
+                    "seenAtMs": max(raw_seen_at_ms, created_at_ms),
                     "name": row[3],
                     "symbol": row[4],
                     "initialMarketCapSol": row[5],

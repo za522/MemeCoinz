@@ -193,6 +193,15 @@ export interface PaidAttentionObservation extends TimestampedEvidence {
   trendingRank: number | null;
 }
 
+/** Deterministic launch-metadata narrative; distinct from social-post evidence. */
+export interface MetadataNarrativeObservation extends TimestampedEvidence {
+  theme: string;
+  matchedTokens: string[];
+  themeConfidence0To100: number;
+  metadataCompleteness0To100: number;
+  socialLinkCount: number | null;
+}
+
 export type RegimeLabel = "risk-on" | "neutral" | "congested" | "risk-off";
 
 export interface MarketRegimeObservation extends TimestampedEvidence {
@@ -218,6 +227,7 @@ export interface PointInTimeInput {
   quotes: QuoteObservation[];
   socialPosts: SocialPostObservation[];
   socialCounts?: SocialCountObservation[];
+  metadataNarrative?: MetadataNarrativeObservation[];
   paidAttention: PaidAttentionObservation[];
   regimes: MarketRegimeObservation[];
 }
@@ -249,6 +259,8 @@ export interface ExecutionProbeFeatures {
   sellRouteAvailable: boolean | null;
   buyPriceImpactPct: number | null;
   sellPriceImpactPct: number | null;
+  /** Quote-pair retention before unknown network/priority fees. */
+  grossRoundTripRetentionPct: number | null;
   roundTripRetentionPct: number | null;
   totalFeesUsd: number | null;
   quoteLatencyMs: number | null;
@@ -306,6 +318,10 @@ export interface CoordinationWashFeatures {
 }
 
 export interface NarrativePaidAttentionFeatures {
+  metadataTheme: string | null;
+  metadataThemeConfidence0To100: number | null;
+  metadataCompleteness0To100: number | null;
+  metadataSocialLinkCount: number | null;
   postCount: number | null;
   postsPerMinute: number | null;
   recentToPriorPostVelocityRatio: number | null;

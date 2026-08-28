@@ -1,0 +1,14 @@
+{
+  "version": "metadata-narrative-taxonomy-v1",
+  "themes": {
+    "ai": ["ai", "agent", "gpt", "claude", "robot", "bot", "neural", "singularity"],
+    "animal": ["cat", "catwif", "dog", "doge", "frog", "pepe", "monkey", "ape", "bear", "bull", "shark", "whale", "goat", "penguin", "panda", "duck", "fish"],
+    "celebrity": ["elon", "musk", "trump", "tate", "kanye", "ye", "celebrity", "president"],
+    "crypto": ["bitcoin", "btc", "ethereum", "eth", "solana", "sol", "satoshi", "blockchain", "crypto", "defi", "pump"],
+    "finance": ["money", "cash", "bank", "dollar", "usd", "rich", "million", "billion", "wallstreet", "stock", "gold"],
+    "food": ["pizza", "burger", "taco", "coffee", "beer", "banana", "chicken", "cake", "cookie", "cheese"],
+    "internet": ["meme", "viral", "based", "chad", "wojak", "sigma", "npc", "lol", "rekt", "moon", "fomo"],
+    "politics": ["maga", "politic", "election", "president", "government", "america", "usa", "china", "tariff"],
+    "sports": ["worldcup", "football", "soccer", "basketball", "nba", "nfl", "fifa", "ufc", "boxing", "athlete", "champion"]
+  }
+}

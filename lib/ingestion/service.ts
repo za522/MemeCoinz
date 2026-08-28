@@ -12,6 +12,7 @@ import {
   persistCoinBatch,
   readLatestResearchSummaries,
   readStoredCandidates,
+  readStoredMarketSnapshots,
   readStoredObservations,
 } from "./storage";
 import type { LaunchCandidate } from "./types";
@@ -84,6 +85,26 @@ function emptyMarket(): CoinListItem["market"] {
     dexId: null,
     pairCreatedAt: null,
     observedAt: null,
+  };
+}
+
+export function mergeStoredMarket(
+  current: CoinListItem["market"],
+  stored: CoinListItem["market"] | undefined,
+): CoinListItem["market"] {
+  if (!stored) return current;
+  return {
+    priceUsd: current.priceUsd ?? stored.priceUsd,
+    marketCapUsd: current.marketCapUsd ?? stored.marketCapUsd,
+    liquidityUsd: current.liquidityUsd ?? stored.liquidityUsd,
+    volume24hUsd: current.volume24hUsd ?? stored.volume24hUsd,
+    buys24h: current.buys24h ?? stored.buys24h,
+    sells24h: current.sells24h ?? stored.sells24h,
+    priceChange24hPct: current.priceChange24hPct ?? stored.priceChange24hPct,
+    pairAddress: current.pairAddress ?? stored.pairAddress,
+    dexId: current.dexId ?? stored.dexId,
+    pairCreatedAt: current.pairCreatedAt ?? stored.pairCreatedAt,
+    observedAt: current.observedAt ?? stored.observedAt,
   };
 }
 
@@ -206,7 +227,14 @@ export async function listCoins(
         warnings: [] as string[],
       }
     : await enrichCandidates(candidates);
-  const filtered = filterCoins(enrichment.coins, options).slice(0, limit);
+  const storedMarkets = await readStoredMarketSnapshots(candidates.map((candidate) => candidate.mint));
+  const hydratedCoins = enrichment.coins.map((coin) => {
+    return {
+      ...coin,
+      market: mergeStoredMarket(coin.market, storedMarkets.get(coin.mint)),
+    };
+  });
+  const filtered = filterCoins(hydratedCoins, options).slice(0, limit);
   const observations = [
     ...launchObservations(candidates),
     ...enrichment.observations,

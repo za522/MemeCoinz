@@ -59,6 +59,7 @@ export interface ObservationMappingAudit {
     quotes: number;
     socialPosts: number;
     socialCounts: number;
+    metadataNarrative: number;
     paidAttention: number;
     regimes: number;
   };

@@ -1,2 +1,2 @@
-export { collectTokenResearchInputs } from "./token";
+export { collectTokenResearchInputs, jupiterProbeObservations } from "./token";
 export type * from "./types";

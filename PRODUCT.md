@@ -2,7 +2,7 @@
 name: "MemeTrace"
 description: "A point-in-time research app for discovering Solana memecoin launches, comparing their evidence, and testing whether early information predicts executable outcomes."
 register: "product"
-updated: "2026-08-28"
+updated: "2026-08-29"
 ---
 
 # Product
@@ -27,7 +27,7 @@ The product combines a real launch feed, an evidence report for one exact mint, 
 2. Open one exact mint and inspect what the available evidence supports at `30s`, `1m`, `5m`, `15m`, or `1h` after launch or graduation.
 3. Audit where every field came from, how outcomes and models are defined, how much coverage exists, and what is still unavailable.
 
-The first broad historical launch index is the corrected RED-PUMP-2026-v1 corpus (860,194 unique Pump launches observed from 8 May to 10 June 2026). It is suitable for browsing launch metadata and confirmed fast-graduation evidence. Its `TIMEOUT` rows are right-censored after a short rolling-feed visibility window and must never be treated as failed or unprofitable coins.
+The first broad historical launch index is the corrected RED-PUMP-2026-v1 corpus (860,194 unique Pump launches observed from 8 May to 10 June 2026). Every row now has a chronology-safe metadata/narrative feature record and the app reports descriptive feature associations against confirmed fast graduation. This is useful research evidence, but not a profitability label: its `TIMEOUT` rows are right-censored after a short rolling-feed visibility window and must never be treated as failed or unprofitable coins.
 
 ## Screen map
 
@@ -91,11 +91,12 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - Protected bounded collection input: Helius address history; Solana Tracker trades, holders/chart, bundler/risk classifications, and deployer history; X exact-mint/official-URL/full-name post search and counts; current Jupiter size-specific round-trip quotes; and current global Jito tip context. Metered Helius/Tracker/X or keyed Jupiter calls require explicit request authorization, the global cost gate, and the provider credential. No such provider credential is installed in the current local environment.
 - Protected manual pipeline input: one bounded request may orchestrate discovery, one detail load per selected coin, optional advanced collection, every elapsed clock/cutoff snapshot, exact validated-artifact shadow lookup, matured-outcome materialization, candidate-only training, and optional Telegram delivery. It is an operator runner, not a scheduler or trading engine.
 - Manual/reference-only sites: Pump.fun consumer pages, Fomo.family, Photon MemeScope, and memescope.net are not scraped.
-- Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. The corrected RED-PUMP importer keeps its browseable compact launch index in D1 and its hash-verified immutable gzip sources privately in R2. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only.
+- Free direct collector: an operator process queries the official public Solana RPC, applies the same exact Pump decoder, enriches confirmed mints through public DEX Screener and Jupiter reads, persists bounded normalized evidence through a protected local route, checkpoints archive progress, and can repeat in watch mode. Public RPC remains best-effort and has no archive-completeness guarantee.
+- Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. The corrected RED-PUMP importer keeps its browseable compact launch index plus chronology-safe calculated feature layer and aggregate associations in D1, and its hash-verified immutable gzip sources privately in R2. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only.
 - Repository research code: point-in-time feature derivation, executable outcome labels, dataset leakage audit, regularized logistic ensemble training, calibration, chronological validation, relationships, ablations, and prediction intervals.
-- Unknown or unavailable in the current local environment: complete transaction/outcome history for the broad launch cohort, continuous background capture, actual historical provider latency, resolved holder ownership, full narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
+- Unknown or unavailable in the current local environment: complete transaction/outcome history for the broad launch cohort, durable hosted scheduling, actual historical provider latency, resolved holder ownership, full social narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
 
-## Current release: 0.4.0
+## Current release: 0.5.0
 
 ### Available
 
@@ -110,17 +111,19 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - A protected manual pipeline runner that executes one bounded end-to-end maintenance pass across at most 10 coins. Metered collection is off by default, Telegram is opt-in/dry-run by default, and candidate models are never promoted automatically.
 - Protected candidate/validated model-artifact persistence, validated-only shadow prediction serving, and a disabled-by-default Telegram delivery runner with probability thresholding and delivery deduplication.
 - A separate historical launch view backed by the corrected 860,194-launch RED-PUMP corpus, with raw-source hashes, exact import counts, pagination, and censored outcomes preserved as unknown.
+- Chronology-safe calculated metadata/narrative features for all 860,194 historical launches, plus descriptive lower-bound associations that retain censored/unknown rows in the denominator.
+- A free direct collector with live/archive modes, checkpointed continuation, exact Pump decoding, public DEX/Jupiter enrichment, protected ingestion, and optional watch mode. At the 28 August 2026 verification checkpoint, local runs had persisted two canonical launches, 51 observations (including 37 size-specific execution quotes), and nine elapsed point-in-time snapshots without paid credentials. The watcher continues to append evidence after that checkpoint.
 - Exactly three user-facing screens and no synthetic coin as the default experience.
 
 ### Not available or not yet demonstrated
 
-- The bounded live scan is not a complete launch denominator, archive backfill, or always-on collector.
+- The bounded live scan and free direct collector are not a complete launch denominator or guaranteed archive backfill; watch mode is an operator process, not a durable hosted scheduler.
 - The broad launch cohort is large, but it lacks complete transaction paths and valid executable winner/loser labels, so it cannot by itself train or validate the intended model.
 - No matching validated model artifact or eligible shadow prediction currently exists, so the alert runner has nothing it may truthfully deliver.
 - No scheduler or current collector builds complete `execution_path` sequences across an outcome horizon; the manual materializer can label only qualifying paths that already exist in D1.
 - No forecast, feature importance, confidence interval, or profitability claim is shown as validated merely because its calculation code exists.
 - No Helius, Solana Tracker, X, or production Jupiter credential is installed here.
-- Therefore the credentialed collector branches are implemented but have not produced a live local corpus; status or adapter code is not evidence of provider coverage.
+- Therefore the credentialed collector branches are implemented but have not produced a credentialed local corpus; the free public collector's verified rows do not imply Helius/Tracker/X coverage.
 - DEX Screener paid-profile discovery is selection-biased and cannot measure the base rate of all Pump launches.
 - Historical `available_at` reconstructed from block time plus an assumption is lower fidelity than prospectively recorded arrival time.
 - Holder account ownership, common-funder graphs, atomic bundle membership, narrative authenticity, and size-specific historical exits remain incomplete when the required observations are absent.
@@ -130,7 +133,7 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 
 ## Later
 
-- Run a durable, continuously monitored collector plus archive backfill over a contiguous, outcome-independent cohort and publish reconciliation/coverage reports.
+- Operate the free collector continuously and reconcile every decoded page; add a production archive/streaming provider only when free public-RPC retention or rate limits prevent complete coverage.
 - Schedule the authenticated collector prospectively so X identity-matched posts, Jupiter size-specific routes, Jito context, provider failures/latency, and source health are actually retained; add embeddings, exact slot ordering, wallet-owner resolution, and token-specific bundle evidence where lawful and technically available.
 - Collect complete execution paths and schedule feature/outcome materialization for all cutoffs, train only after the cohort passes audit, then publish walk-forward results with denominators and uncertainty.
 - Operate the optional alert runner only after a validated artifact, explicit probability threshold, delivery credentials, and scheduler controls are reviewed; alerts remain research notifications, not trade instructions.

@@ -1,5 +1,5 @@
 import { authorizeCohortImport } from "@/lib/cohort/auth";
-import { parseCohortImportRows } from "@/lib/cohort/validation";
+import { parseCohortFeatureRows, parseCohortImportRows } from "@/lib/cohort/validation";
 
 const headers = {
   "Cache-Control": "no-store",
@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     const {
       finalizeCohortImport,
       initializeCohortImport,
+      writeCohortFeatureRows,
       writeCohortRows,
     } = await import("@/lib/cohort/repository");
     if (body.action === "manifest") {
@@ -54,6 +55,21 @@ export async function POST(request: Request) {
         lastMint: parsed.rows.at(-1)?.mint ?? null,
       }, { headers });
     }
+    if (body.action === "features") {
+      const parsed = parseCohortFeatureRows(body.rows);
+      if (parsed.error) {
+        return Response.json(
+          { error: "invalid_feature_rows", message: parsed.error },
+          { status: 400, headers },
+        );
+      }
+      return Response.json({
+        action: "features",
+        accepted: parsed.rows.length,
+        changed: await writeCohortFeatureRows(parsed.rows),
+        lastMint: parsed.rows.at(-1)?.mint ?? null,
+      }, { headers });
+    }
     if (body.action === "finalize") {
       const dataset = await finalizeCohortImport();
       return Response.json(
@@ -62,7 +78,7 @@ export async function POST(request: Request) {
       );
     }
     return Response.json(
-      { error: "invalid_action", message: "action must be manifest, rows, or finalize." },
+      { error: "invalid_action", message: "action must be manifest, rows, features, or finalize." },
       { status: 400, headers },
     );
   } catch (error) {

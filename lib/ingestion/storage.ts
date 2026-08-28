@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import {
   assets,
@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type {
   CoinListItem,
+  CoinMarketSnapshot,
   CoinObservation,
   CoinProvenance,
   CoinResearchSummary,
@@ -167,18 +168,18 @@ export async function persistCoinBatch(
       }).onConflictDoUpdate({
         target: assets.id,
         set: {
-          venue: coin.lifecycle.venue,
-          name: coin.name ?? "Unknown",
-          symbol: coin.symbol ?? "?",
-          creatorAddress: coin.creator,
-          createdSlot: coin.createdSlot,
-          metadataUri: coin.metadataUri,
-          imageUri: coin.imageUri,
-          creationSignature: coin.creationSignature,
-          lifecycleStage: coin.lifecycle.stage,
-          graduatedAt: coin.lifecycle.graduatedAt,
-          poolAddress: coin.lifecycle.poolAddress,
-          canonicalConfirmed: coin.canonicalConfirmed,
+          venue: sql<string>`case when excluded.venue = 'unknown' then ${assets.venue} else excluded.venue end`,
+          name: sql<string>`case when excluded.name = 'Unknown' then ${assets.name} else excluded.name end`,
+          symbol: sql<string>`case when excluded.symbol = '?' then ${assets.symbol} else excluded.symbol end`,
+          creatorAddress: sql<string | null>`coalesce(excluded.creator_address, ${assets.creatorAddress})`,
+          createdSlot: sql<number | null>`coalesce(excluded.created_slot, ${assets.createdSlot})`,
+          metadataUri: sql<string | null>`coalesce(excluded.metadata_uri, ${assets.metadataUri})`,
+          imageUri: sql<string | null>`coalesce(excluded.image_uri, ${assets.imageUri})`,
+          creationSignature: sql<string | null>`coalesce(excluded.creation_signature, ${assets.creationSignature})`,
+          lifecycleStage: sql<string>`case when excluded.lifecycle_stage = 'unknown' then ${assets.lifecycleStage} else excluded.lifecycle_stage end`,
+          graduatedAt: sql<string | null>`coalesce(excluded.graduated_at, ${assets.graduatedAt})`,
+          poolAddress: sql<string | null>`coalesce(excluded.pool_address, ${assets.poolAddress})`,
+          canonicalConfirmed: sql<boolean>`max(${assets.canonicalConfirmed}, excluded.canonical_confirmed)`,
           updatedAt: now,
         },
       });
@@ -187,7 +188,7 @@ export async function persistCoinBatch(
     let observationsWritten = 0;
     for (const row of observationRows) {
       if (!persistedMints.has(row.mint)) continue;
-      await db.insert(observations).values({
+      const inserted = await db.insert(observations).values({
         id: row.id,
         assetId: assetId(row.mint),
         sourceId: row.sourceId,
@@ -206,8 +207,8 @@ export async function persistCoinBatch(
         rawObjectKey: null,
         normalizedJson: JSON.stringify(row.normalized),
         nullReason: row.nullReason,
-      }).onConflictDoNothing({ target: observations.id });
-      observationsWritten += 1;
+      }).onConflictDoNothing({ target: observations.id }).returning({ id: observations.id });
+      observationsWritten += inserted.length;
     }
     return {
       state: "written",
@@ -307,6 +308,70 @@ export async function readStoredObservations(
   }
 }
 
+export async function readStoredMarketSnapshots(
+  mints: string[],
+): Promise<Map<string, CoinMarketSnapshot>> {
+  const uniqueMints = [...new Set(mints)].slice(0, 200);
+  if (!uniqueMints.length) return new Map();
+  try {
+    const db = await getDb();
+    const ids = uniqueMints.map(assetId);
+    const rows = await db.select({
+      assetId: observations.assetId,
+      observationType: observations.observationType,
+      eventAt: observations.eventAt,
+      normalizedJson: observations.normalizedJson,
+    }).from(observations)
+      .where(inArray(observations.assetId, ids))
+      .orderBy(desc(observations.eventAt))
+      .limit(Math.min(2_000, ids.length * 10));
+    const byMint = new Map<string, CoinMarketSnapshot>();
+    const initialized = () => ({
+      priceUsd: null,
+      marketCapUsd: null,
+      liquidityUsd: null,
+      volume24hUsd: null,
+      buys24h: null,
+      sells24h: null,
+      priceChange24hPct: null,
+      pairAddress: null,
+      dexId: null,
+      pairCreatedAt: null,
+      observedAt: null,
+    } satisfies CoinMarketSnapshot);
+    const finite = (value: unknown): number | null =>
+      typeof value === "number" && Number.isFinite(value) ? value : null;
+    const string = (value: unknown): string | null => typeof value === "string" ? value : null;
+    for (const row of rows) {
+      if (!row.assetId) continue;
+      const mint = row.assetId.startsWith("solana:") ? row.assetId.slice(7) : row.assetId;
+      const current = byMint.get(mint) ?? initialized();
+      const value = parsedObject(row.normalizedJson);
+      if (row.observationType === "market_snapshot") {
+        current.priceUsd ??= finite(value.priceUsd);
+        current.marketCapUsd ??= finite(value.marketCapUsd);
+        current.liquidityUsd ??= finite(value.liquidityUsd);
+        current.volume24hUsd ??= finite(value.volume24hUsd);
+        current.buys24h ??= finite(value.buys24h);
+        current.sells24h ??= finite(value.sells24h);
+        current.priceChange24hPct ??= finite(value.priceChange24hPct);
+        current.pairAddress ??= string(value.pairAddress);
+        current.dexId ??= string(value.dexId);
+        current.pairCreatedAt ??= string(value.pairCreatedAt);
+        current.observedAt ??= row.eventAt;
+      } else if (row.observationType === "price_snapshot") {
+        current.priceUsd ??= finite(value.priceUsd);
+        current.priceChange24hPct ??= finite(value.priceChange24hPct);
+        current.observedAt ??= row.eventAt;
+      }
+      byMint.set(mint, current);
+    }
+    return byMint;
+  } catch {
+    return new Map();
+  }
+}
+
 function parsedObject(value: string): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(value);
@@ -392,6 +457,10 @@ export async function readLatestResearchSummaries(
         coordinationEvidence0To100: numericFeature(
           featureEnvelope,
           "coordination.coordinationEvidence0To100",
+        ),
+        grossRoundTripRetentionPct: numericFeature(
+          featureEnvelope,
+          "execution.100.grossRoundTripRetentionPct",
         ),
         roundTripRetentionPct: numericFeature(
           featureEnvelope,

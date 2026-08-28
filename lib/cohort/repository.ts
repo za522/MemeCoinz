@@ -6,6 +6,7 @@ import {
 } from "./constants";
 import type {
   CohortImportRow,
+  CohortFeatureImportRow,
   CohortLaunchListItem,
   CohortLaunchesResponse,
   CohortManifestStatus,
@@ -49,6 +50,22 @@ interface LaunchDbRow {
   observed_status: -1 | 0 | 1;
   observed_graduation_at_ms: number | null;
   observed_graduation_minutes: number | null;
+  feature_set_version: string | null;
+  narrative_theme: string | null;
+  narrative_tokens_json: string | null;
+  theme_confidence_0_to_100: number | null;
+  metadata_completeness_0_to_100: number | null;
+  social_link_count: number | null;
+  name_reuse_prior_24h: number | null;
+  symbol_reuse_prior_24h: number | null;
+  theme_launches_prior_1h: number | null;
+  theme_launches_prior_24h: number | null;
+  theme_momentum_ratio: number | null;
+  launches_prior_5m: number | null;
+  launches_prior_1h: number | null;
+  narrative_novelty_0_to_100: number | null;
+  copy_pressure_0_to_100: number | null;
+  observation_lag_ms: number | null;
 }
 
 interface CursorValue {
@@ -209,6 +226,55 @@ export async function writeCohortRows(rows: CohortImportRow[]): Promise<number> 
   return typeof changes === "number" ? changes : rows.length;
 }
 
+export async function writeCohortFeatureRows(rows: CohortFeatureImportRow[]): Promise<number> {
+  const result = await env.DB.prepare(
+    `INSERT INTO cohort_launch_features (
+      mint, feature_set_version, normalized_name, normalized_symbol,
+      narrative_theme, narrative_tokens_json, theme_confidence_0_to_100,
+      metadata_completeness_0_to_100, social_link_count,
+      name_reuse_prior_24h, symbol_reuse_prior_24h,
+      theme_launches_prior_1h, theme_launches_prior_24h, theme_momentum_ratio,
+      launches_prior_5m, launches_prior_1h, narrative_novelty_0_to_100,
+      copy_pressure_0_to_100, observation_lag_ms, computed_at
+    )
+    SELECT
+      json_extract(value, '$.mint'), json_extract(value, '$.featureSetVersion'),
+      json_extract(value, '$.normalizedName'), json_extract(value, '$.normalizedSymbol'),
+      json_extract(value, '$.narrativeTheme'), json_extract(value, '$.narrativeTokens'),
+      json_extract(value, '$.themeConfidence0To100'),
+      json_extract(value, '$.metadataCompleteness0To100'),
+      json_extract(value, '$.socialLinkCount'), json_extract(value, '$.nameReusePrior24h'),
+      json_extract(value, '$.symbolReusePrior24h'), json_extract(value, '$.themeLaunchesPrior1h'),
+      json_extract(value, '$.themeLaunchesPrior24h'), json_extract(value, '$.themeMomentumRatio'),
+      json_extract(value, '$.launchesPrior5m'), json_extract(value, '$.launchesPrior1h'),
+      json_extract(value, '$.narrativeNovelty0To100'), json_extract(value, '$.copyPressure0To100'),
+      json_extract(value, '$.observationLagMs'), json_extract(value, '$.computedAt')
+    FROM json_each(?)
+    WHERE 1 = 1
+    ON CONFLICT(mint) DO UPDATE SET
+      feature_set_version = excluded.feature_set_version,
+      normalized_name = excluded.normalized_name,
+      normalized_symbol = excluded.normalized_symbol,
+      narrative_theme = excluded.narrative_theme,
+      narrative_tokens_json = excluded.narrative_tokens_json,
+      theme_confidence_0_to_100 = excluded.theme_confidence_0_to_100,
+      metadata_completeness_0_to_100 = excluded.metadata_completeness_0_to_100,
+      social_link_count = excluded.social_link_count,
+      name_reuse_prior_24h = excluded.name_reuse_prior_24h,
+      symbol_reuse_prior_24h = excluded.symbol_reuse_prior_24h,
+      theme_launches_prior_1h = excluded.theme_launches_prior_1h,
+      theme_launches_prior_24h = excluded.theme_launches_prior_24h,
+      theme_momentum_ratio = excluded.theme_momentum_ratio,
+      launches_prior_5m = excluded.launches_prior_5m,
+      launches_prior_1h = excluded.launches_prior_1h,
+      narrative_novelty_0_to_100 = excluded.narrative_novelty_0_to_100,
+      copy_pressure_0_to_100 = excluded.copy_pressure_0_to_100,
+      observation_lag_ms = excluded.observation_lag_ms,
+      computed_at = excluded.computed_at`,
+  ).bind(JSON.stringify(rows)).run();
+  return typeof result.meta.changes === "number" ? result.meta.changes : rows.length;
+}
+
 export async function recordRawObject(
   filename: string,
   objectKey: string,
@@ -314,6 +380,31 @@ function launchFromRow(row: LaunchDbRow): CohortLaunchListItem {
       ? null
       : new Date(row.observed_graduation_at_ms).toISOString(),
     observedGraduationMinutes: row.observed_graduation_minutes,
+    calculated: row.feature_set_version === null ? null : {
+      featureSetVersion: row.feature_set_version,
+      narrativeTheme: row.narrative_theme ?? "other",
+      narrativeTokens: (() => {
+        try {
+          const value: unknown = JSON.parse(row.narrative_tokens_json ?? "[]");
+          return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+        } catch {
+          return [];
+        }
+      })(),
+      themeConfidence0To100: row.theme_confidence_0_to_100 ?? 0,
+      metadataCompleteness0To100: row.metadata_completeness_0_to_100 ?? 0,
+      socialLinkCount: row.social_link_count ?? 0,
+      nameReusePrior24h: row.name_reuse_prior_24h ?? 0,
+      symbolReusePrior24h: row.symbol_reuse_prior_24h ?? 0,
+      themeLaunchesPrior1h: row.theme_launches_prior_1h ?? 0,
+      themeLaunchesPrior24h: row.theme_launches_prior_24h ?? 0,
+      themeMomentumRatio: row.theme_momentum_ratio,
+      launchesPrior5m: row.launches_prior_5m ?? 0,
+      launchesPrior1h: row.launches_prior_1h ?? 0,
+      narrativeNovelty0To100: row.narrative_novelty_0_to_100 ?? 0,
+      copyPressure0To100: row.copy_pressure_0_to_100 ?? 0,
+      observationLagMs: row.observation_lag_ms ?? 0,
+    },
   };
 }
 
@@ -327,7 +418,7 @@ export async function listCohortLaunches(options: {
     Math.max(1, Math.trunc(options.limit ?? 50)),
   );
   const cursor = decodeCursor(options.cursor ?? null);
-  const clauses = ["dataset_id = ?"];
+  const clauses = ["l.dataset_id = ?"];
   const bindings: unknown[] = [RED_PUMP_DATASET.id];
   if (options.observedStatus && options.observedStatus !== "all") {
     const status = options.observedStatus === "confirmed-fast-graduation"
@@ -335,30 +426,73 @@ export async function listCohortLaunches(options: {
       : options.observedStatus === "right-censored"
         ? OBSERVED_STATUS.rightCensored
         : OBSERVED_STATUS.withoutPublishedOutcome;
-    clauses.push("observed_status = ?");
+    clauses.push("l.observed_status = ?");
     bindings.push(status);
   }
   if (cursor) {
-    clauses.push("(created_at_ms < ? OR (created_at_ms = ? AND mint < ?))");
+    clauses.push("(l.created_at_ms < ? OR (l.created_at_ms = ? AND l.mint < ?))");
     bindings.push(cursor.createdAtMs, cursor.createdAtMs, cursor.mint);
   }
   bindings.push(limit + 1);
   const result = await env.DB.prepare(
-    `SELECT mint, created_at_ms, seen_at_ms, name, symbol, initial_market_cap_sol,
+    `SELECT l.mint, l.created_at_ms, l.seen_at_ms, l.name, l.symbol, l.initial_market_cap_sol,
       has_x, has_website, has_telegram, description_length, observed_status,
-      observed_graduation_at_ms, observed_graduation_minutes
-    FROM cohort_launches
+      observed_graduation_at_ms, observed_graduation_minutes,
+      f.feature_set_version, f.narrative_theme, f.narrative_tokens_json,
+      f.theme_confidence_0_to_100, f.metadata_completeness_0_to_100,
+      f.social_link_count, f.name_reuse_prior_24h, f.symbol_reuse_prior_24h,
+      f.theme_launches_prior_1h, f.theme_launches_prior_24h, f.theme_momentum_ratio,
+      f.launches_prior_5m, f.launches_prior_1h, f.narrative_novelty_0_to_100,
+      f.copy_pressure_0_to_100, f.observation_lag_ms
+    FROM cohort_launches l
+    LEFT JOIN cohort_launch_features f ON f.mint = l.mint
     WHERE ${clauses.join(" AND ")}
-    ORDER BY created_at_ms DESC, mint DESC
+    ORDER BY created_at_ms DESC, l.mint DESC
     LIMIT ?`,
   ).bind(...bindings).all<LaunchDbRow>();
   const hasMore = result.results.length > limit;
   const pageRows = result.results.slice(0, limit);
   const finalRow = pageRows.at(-1);
+  const dataset = await readCohortStatus();
+  const featureCountRow = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM cohort_launch_features WHERE feature_set_version = ?",
+  ).bind("cohort-metadata-narrative-v1").first<{ count: number }>();
+  const featureRows = Number(featureCountRow?.count ?? 0);
+  const featurePct = dataset.counts.launches === 0 ? 0 : featureRows / dataset.counts.launches * 100;
+  const associationResult = await env.DB.prepare(
+    `SELECT dimension, bucket, launches, confirmed_fast_graduations, lower_bound_rate_pct
+     FROM cohort_feature_aggregates
+     WHERE feature_set_version = ? AND launches >= 1000
+     ORDER BY lower_bound_rate_pct DESC, launches DESC
+     LIMIT 8`,
+  ).bind("cohort-metadata-narrative-v1").all<{
+    dimension: string;
+    bucket: string;
+    launches: number;
+    confirmed_fast_graduations: number;
+    lower_bound_rate_pct: number;
+  }>();
   return {
     generatedAt: new Date().toISOString(),
-    dataset: await readCohortStatus(),
+    dataset,
     launches: pageRows.map(launchFromRow),
+    calculatedCoverage: {
+      featureSetVersion: "cohort-metadata-narrative-v1",
+      rows: featureRows,
+      pct: Math.round(featurePct * 100) / 100,
+      status: featureRows === 0 ? "not-calculated" : featureRows === dataset.counts.launches ? "complete" : "partial",
+      meaning: "Metadata narrative, reuse, novelty, launch-rate, completeness, and observation-lag features only; not X sentiment, wallet coordination, or trade outcomes.",
+    },
+    featureAssociations: {
+      method: "Descriptive lower bound: confirmed fast graduations divided by all launches in the bucket. Right-censored launches remain in the denominator, so this is not a failure rate, causal effect, or complete profitability label.",
+      rows: associationResult.results.map((row) => ({
+        dimension: row.dimension,
+        bucket: row.bucket,
+        launches: row.launches,
+        confirmedFastGraduations: row.confirmed_fast_graduations,
+        lowerBoundRatePct: row.lower_bound_rate_pct,
+      })),
+    },
     pagination: {
       limit,
       hasMore,

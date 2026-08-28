@@ -3,12 +3,19 @@ import test from "node:test";
 
 import { encodeBase58 } from "../lib/ingestion/base58";
 import { mergeLaunchCandidates } from "../lib/ingestion/discovery";
+import { parseProtectedIngestionPayload } from "../lib/ingestion/bridge";
 import { transactionObservation } from "../lib/ingestion/history";
 import { decodePumpCreateData, parseRpcTransaction } from "../lib/ingestion/pump-parser";
 import { PUMP_AMM_PROGRAM_ID, PUMP_DISCRIMINATORS } from "../lib/ingestion/pump-idl";
-import { decodeCoinsCursor, encodeCoinsCursor, listCoins } from "../lib/ingestion/service";
+import {
+  decodeCoinsCursor,
+  encodeCoinsCursor,
+  listCoins,
+  mergeStoredMarket,
+} from "../lib/ingestion/service";
 import { storedAssetLaunchProvenance } from "../lib/ingestion/storage";
 import type { LaunchCandidate } from "../lib/ingestion/types";
+import type { CoinMarketSnapshot } from "../lib/coins/types";
 
 const MINT = "CSGoq89FbVgWcG6s91kQBQvn1Evvjm5P7x5q9HSDpump";
 const CREATOR = "Fb8WmTgHy7FCNpQQTpiSZCNn8Wr1h79jkSJGSReGteUr";
@@ -143,6 +150,46 @@ test("stored assets reconstruct a canonical launch only from complete create evi
   assert.equal(vendorOnly.fidelity, "indexed");
 });
 
+test("protected ingestion accepts bounded normalized evidence and rejects unknown sources", () => {
+  const now = "2026-08-29T00:00:00.000Z";
+  const mint = "11111111111111111111111111111111";
+  const coin = {
+    mint,
+    name: "Cat Agent",
+    symbol: "CAT",
+    imageUri: null,
+    metadataUri: null,
+    creator: null,
+    createdAt: now,
+    createdSlot: 1,
+    creationSignature: "signature",
+    canonicalConfirmed: true,
+    lifecycle: { venue: "pump", stage: "bonding", graduatedAt: null, poolAddress: null },
+    market: {
+      priceUsd: null, marketCapUsd: null, liquidityUsd: null, volume24hUsd: null,
+      buys24h: null, sells24h: null, priceChange24hPct: null, pairAddress: null,
+      dexId: null, pairCreatedAt: null, observedAt: null,
+    },
+    provenance: [{
+      sourceId: "pump-onchain", role: "canonical-launch",
+      fidelity: "canonical-confirmed", eventAt: now, observedAt: now,
+      availableAt: now, retrievedAt: now, signature: "signature", slot: 1,
+    }],
+    missing: [],
+  };
+  const observation = {
+    id: `${mint}:launch`, mint, sourceId: "pump-onchain", observationType: "pump_launch",
+    eventAt: now, observedAt: now, availableAt: now, retrievedAt: now, slot: 1,
+    transactionIndex: null, instructionIndex: 0, commitment: "confirmed",
+    canonicalStatus: "confirmed", fidelity: "canonical-confirmed", signature: "signature",
+    normalized: { name: "Cat Agent", symbol: "CAT" }, nullReason: null,
+  };
+  assert.equal(parseProtectedIngestionPayload({ coins: [coin], observations: [observation] }).error, null);
+  assert.match(parseProtectedIngestionPayload({
+    coins: [coin], observations: [{ ...observation, sourceId: "unknown-provider" }],
+  }).error ?? "", /observations\[0\] is invalid/);
+});
+
 test("PumpSwap buy uses official base-mint account and reconstructed availability", () => {
   const user = "9xQeWvG816bUx9EPjHmaT23yvVMZpE4Qn7yZ7C6mFgHQ";
   const raw = {
@@ -197,6 +244,31 @@ test("pagination cursors round-trip and malformed input is rejected", () => {
   const value = { rpcBefore: "sig-a", pumpSwapBefore: "sig-b", trackerPage: 2 };
   assert.deepEqual(decodeCoinsCursor(encodeCoinsCursor(value)), value);
   assert.equal(decodeCoinsCursor("not-base64-json"), null);
+});
+
+test("stored market evidence fills only fields missing from a live response", () => {
+  const empty: CoinMarketSnapshot = {
+    priceUsd: null,
+    marketCapUsd: null,
+    liquidityUsd: null,
+    volume24hUsd: null,
+    buys24h: null,
+    sells24h: null,
+    priceChange24hPct: null,
+    pairAddress: null,
+    dexId: null,
+    pairCreatedAt: null,
+    observedAt: null,
+  };
+  const stored: CoinMarketSnapshot = {
+    ...empty,
+    priceUsd: 0.000003,
+    marketCapUsd: 3_000,
+    volume24hUsd: 450,
+    observedAt: "2026-08-28T19:42:49.625Z",
+  };
+  assert.deepEqual(mergeStoredMarket(empty, stored), stored);
+  assert.equal(mergeStoredMarket({ ...empty, priceUsd: 0.000004 }, stored).priceUsd, 0.000004);
 });
 
 test("auto discovery returns real DEX fallback rows when canonical RPC page is empty", async () => {

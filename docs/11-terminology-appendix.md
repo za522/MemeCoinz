@@ -30,6 +30,16 @@ Short, plain-English definitions for terms used in the app and research handbook
 
 **Derived feature:** A calculated research value, such as holder concentration, built from one or more observations. It is not raw evidence and must retain its formula version and inputs.
 
+**Metadata narrative:** A deterministic theme inferred only from a token's launch name, symbol, and metadata URI. It is a useful free proxy, not public sentiment or proof that people are discussing the token.
+
+**Narrative novelty:** How uncommon a token's metadata theme is relative to themes observed before that launch. High novelty means “less common in the earlier cohort,” not “better.”
+
+**Copy pressure:** A versioned score combining recent theme crowding and prior reuse of the exact name or ticker. It estimates imitation pressure but cannot prove copying or coordinated control.
+
+**Lower-bound association:** The confirmed positive outcomes divided by every row in a feature band while unknown/censored rows remain in the denominator. It is deliberately conservative and is not a causal effect or profit probability.
+
+**Direct collector bridge:** A protected local ingestion boundary that accepts validated normalized evidence from an operator process able to reach public providers. It does not weaken authentication, authorize paid APIs, or submit trades.
+
 **Feature snapshot:** The versioned set of feature values for one exact mint, reference clock, and cutoff. Every value keeps its event time, available time, family, fidelity, and missing reason.
 
 **Dataset / model version:** An immutable identifier for the exact records, definitions, code, and trained parameters used in a result, allowing it to be reproduced later.

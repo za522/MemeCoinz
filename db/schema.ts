@@ -315,3 +315,72 @@ export const cohortLaunches = sqliteTable(
     index("idx_cohort_launches_dataset_status").on(table.datasetId, table.observedStatus),
   ],
 );
+
+/**
+ * Deterministic features computed only from information present in the
+ * corrected cohort at each launch timestamp. These are metadata/narrative
+ * priors, not social sentiment, wallet coordination, or executable returns.
+ */
+export const cohortLaunchFeatures = sqliteTable(
+  "cohort_launch_features",
+  {
+    mint: text("mint")
+      .primaryKey()
+      .references(() => cohortLaunches.mint),
+    featureSetVersion: text("feature_set_version").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    normalizedSymbol: text("normalized_symbol").notNull(),
+    narrativeTheme: text("narrative_theme").notNull(),
+    narrativeTokensJson: text("narrative_tokens_json").notNull(),
+    themeConfidence0To100: real("theme_confidence_0_to_100").notNull(),
+    metadataCompleteness0To100: real("metadata_completeness_0_to_100").notNull(),
+    socialLinkCount: integer("social_link_count").notNull(),
+    nameReusePrior24h: integer("name_reuse_prior_24h").notNull(),
+    symbolReusePrior24h: integer("symbol_reuse_prior_24h").notNull(),
+    themeLaunchesPrior1h: integer("theme_launches_prior_1h").notNull(),
+    themeLaunchesPrior24h: integer("theme_launches_prior_24h").notNull(),
+    themeMomentumRatio: real("theme_momentum_ratio"),
+    launchesPrior5m: integer("launches_prior_5m").notNull(),
+    launchesPrior1h: integer("launches_prior_1h").notNull(),
+    narrativeNovelty0To100: real("narrative_novelty_0_to_100").notNull(),
+    copyPressure0To100: real("copy_pressure_0_to_100").notNull(),
+    observationLagMs: integer("observation_lag_ms").notNull(),
+    computedAt: text("computed_at").notNull(),
+  },
+  (table) => [
+    index("idx_cohort_features_version_theme").on(
+      table.featureSetVersion,
+      table.narrativeTheme,
+    ),
+    index("idx_cohort_features_novelty").on(table.narrativeNovelty0To100),
+    index("idx_cohort_features_copy_pressure").on(table.copyPressure0To100),
+  ],
+);
+
+/** Precomputed descriptive associations; never promoted to causal claims. */
+export const cohortFeatureAggregates = sqliteTable(
+  "cohort_feature_aggregates",
+  {
+    featureSetVersion: text("feature_set_version").notNull(),
+    dimension: text("dimension").notNull(),
+    bucket: text("bucket").notNull(),
+    bucketOrder: integer("bucket_order").notNull(),
+    launches: integer("launches").notNull(),
+    confirmedFastGraduations: integer("confirmed_fast_graduations").notNull(),
+    rightCensored: integer("right_censored").notNull(),
+    withoutPublishedOutcome: integer("without_published_outcome").notNull(),
+    lowerBoundRatePct: real("lower_bound_rate_pct").notNull(),
+    computedAt: text("computed_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_cohort_feature_aggregates_key").on(
+      table.featureSetVersion,
+      table.dimension,
+      table.bucket,
+    ),
+    index("idx_cohort_feature_aggregates_dimension_order").on(
+      table.dimension,
+      table.bucketOrder,
+    ),
+  ],
+);

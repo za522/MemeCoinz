@@ -18,6 +18,48 @@ export interface CohortImportRow {
   observedGraduationAtMs: number | null;
   observedGraduationMinutes: number | null;
 }
+
+export interface CohortFeatureImportRow {
+  mint: string;
+  featureSetVersion: string;
+  normalizedName: string;
+  normalizedSymbol: string;
+  narrativeTheme: string;
+  narrativeTokens: string[];
+  themeConfidence0To100: number;
+  metadataCompleteness0To100: number;
+  socialLinkCount: number;
+  nameReusePrior24h: number;
+  symbolReusePrior24h: number;
+  themeLaunchesPrior1h: number;
+  themeLaunchesPrior24h: number;
+  themeMomentumRatio: number | null;
+  launchesPrior5m: number;
+  launchesPrior1h: number;
+  narrativeNovelty0To100: number;
+  copyPressure0To100: number;
+  observationLagMs: number;
+  computedAt: string;
+}
+
+export interface CohortCalculatedFeatures {
+  featureSetVersion: string;
+  narrativeTheme: string;
+  narrativeTokens: string[];
+  themeConfidence0To100: number;
+  metadataCompleteness0To100: number;
+  socialLinkCount: number;
+  nameReusePrior24h: number;
+  symbolReusePrior24h: number;
+  themeLaunchesPrior1h: number;
+  themeLaunchesPrior24h: number;
+  themeMomentumRatio: number | null;
+  launchesPrior5m: number;
+  launchesPrior1h: number;
+  narrativeNovelty0To100: number;
+  copyPressure0To100: number;
+  observationLagMs: number;
+}
 export interface CohortManifestStatus {
   datasetId: string;
   datasetVersion: string;
@@ -62,12 +104,30 @@ export interface CohortLaunchListItem {
   observedStatus: CohortObservedStatus;
   observedGraduationAt: string | null;
   observedGraduationMinutes: number | null;
+  calculated: CohortCalculatedFeatures | null;
 }
 
 export interface CohortLaunchesResponse {
   generatedAt: string;
   dataset: CohortManifestStatus;
   launches: CohortLaunchListItem[];
+  calculatedCoverage: {
+    featureSetVersion: string;
+    rows: number;
+    pct: number;
+    status: "not-calculated" | "partial" | "complete";
+    meaning: string;
+  };
+  featureAssociations: {
+    method: string;
+    rows: Array<{
+      dimension: string;
+      bucket: string;
+      launches: number;
+      confirmedFastGraduations: number;
+      lowerBoundRatePct: number;
+    }>;
+  };
   pagination: {
     limit: number;
     nextCursor: string | null;
