@@ -145,6 +145,7 @@ export interface SolanaHealthData {
 }
 
 export interface SolanaTokenSupply {
+  mint: string;
   amount: string;
   decimals: number;
   uiAmount: number | null;
@@ -179,18 +180,33 @@ export interface DexPairSnapshot {
 }
 
 export interface DexPaidOrder {
+  tokenAddress: string | null;
   type: string;
   status: string;
   paymentTimestamp: number | null;
 }
 
+export interface DexComponentAvailability {
+  available: boolean;
+  checkedAt: string;
+  latencyMs: number;
+  httpStatus: number | null;
+  errorCode?: ProviderErrorCode;
+  retryAfterSeconds?: number;
+}
+
 export interface DexTokenData {
   pairs: DexPairSnapshot[];
   paidOrders: DexPaidOrder[];
+  availability: {
+    pairs: DexComponentAvailability;
+    paidOrders: DexComponentAvailability;
+  };
 }
 
 export interface JupiterPriceData {
   mint: string;
+  found: boolean;
   usdPrice: number | null;
   decimals: number | null;
   blockId: number | null;
@@ -262,6 +278,10 @@ export interface TokenEnrichmentResponse {
   mint: string;
   generatedAt: string;
   meteredProvidersEnabled: boolean;
+  confirmation: {
+    confirmed: boolean;
+    confirmingProviderIds: ProviderId[];
+  };
   warning: string;
   providers: {
     solana: TokenEnrichmentProvider<SolanaTokenSupply>;

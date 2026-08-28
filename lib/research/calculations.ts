@@ -53,6 +53,8 @@ export function findObservationAtOrBefore<T extends ObservationContext>(
       (observation) =>
         observation.canonical &&
         observation.elapsedSeconds <= cutoff.elapsedSeconds &&
+        Date.parse(observation.eventTime) <= availableBy &&
+        Date.parse(observation.observedAt) <= availableBy &&
         Date.parse(observation.availableAt) <= availableBy,
     )
     .sort((left, right) => right.elapsedSeconds - left.elapsedSeconds)[0];
@@ -74,6 +76,8 @@ const previousObservation = <T extends ObservationContext>(
       (observation) =>
         observation.canonical &&
         observation.elapsedSeconds < current.elapsedSeconds &&
+        Date.parse(observation.eventTime) <= Date.parse(current.availableAt) &&
+        Date.parse(observation.observedAt) <= Date.parse(current.availableAt) &&
         Date.parse(observation.availableAt) <= Date.parse(current.availableAt),
     )
     .sort((left, right) => right.elapsedSeconds - left.elapsedSeconds)[0];

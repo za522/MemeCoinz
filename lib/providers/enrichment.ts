@@ -16,6 +16,7 @@ import {
   resultToStatus,
 } from "./status";
 import type {
+  DexTokenData,
   HeliusAssetData,
   ProviderId,
   SolanaTrackerTokenData,
@@ -55,6 +56,102 @@ function gatedProvider<T>(
   };
 }
 
+function dexProviderResult(
+  result: UpstreamResult<DexTokenData>,
+): TokenEnrichmentProvider<DexTokenData> {
+  if (!result.ok) {
+    return providerResult(
+      "dex-screener",
+      result,
+      true,
+      "DEX Screener returned current Solana pools and paid-order status.",
+    );
+  }
+
+  const pairsAvailable = result.data.availability.pairs.available;
+  const paidOrdersAvailable = result.data.availability.paidOrders.available;
+  if (pairsAvailable && paidOrdersAvailable) {
+    return providerResult(
+      "dex-screener",
+      result,
+      true,
+      "DEX Screener returned current Solana pools and paid-order status.",
+    );
+  }
+
+  const failedComponent = pairsAvailable
+    ? result.data.availability.paidOrders
+    : result.data.availability.pairs;
+  return {
+    providerId: "dex-screener",
+    status: {
+      state: "degraded",
+      configured: true,
+      checkedAt: result.checkedAt,
+      latencyMs: result.latencyMs,
+      message: pairsAvailable
+        ? "Paid-order lookup failed; current pair data was retained."
+        : "Pair lookup failed; current paid-order data was retained.",
+      ...(failedComponent.errorCode
+        ? { errorCode: failedComponent.errorCode }
+        : {}),
+      ...(failedComponent.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: failedComponent.retryAfterSeconds }),
+    },
+    data: result.data,
+  };
+}
+
+function deriveTokenConfirmation(
+  mint: string,
+  providers: TokenEnrichmentResponse["providers"],
+): TokenEnrichmentResponse["confirmation"] {
+  const confirmingProviderIds: ProviderId[] = [];
+  const add = (providerId: ProviderId) => {
+    if (!confirmingProviderIds.includes(providerId)) {
+      confirmingProviderIds.push(providerId);
+    }
+  };
+
+  if (providers.solana.data?.mint === mint) add("solana-rpc");
+
+  const dexData = providers.dexScreener.data;
+  if (
+    dexData?.pairs.some(
+      (pair) =>
+        pair.chainId === "solana" &&
+        (pair.baseToken.address === mint || pair.quoteToken.address === mint),
+    ) ||
+    dexData?.paidOrders.some((order) => order.tokenAddress === mint)
+  ) {
+    add("dex-screener");
+  }
+
+  if (
+    providers.jupiter.data?.found &&
+    providers.jupiter.data.mint === mint
+  ) {
+    add("jupiter");
+  }
+
+  const helius = providers.helius.data;
+  if (
+    helius?.id === mint &&
+    (helius.interface?.toLowerCase().includes("fungible") ||
+      (helius.tokenSupply !== null && helius.decimals !== null))
+  ) {
+    add("helius");
+  }
+
+  if (providers.solanaTracker.data?.mint === mint) add("solana-tracker");
+
+  return {
+    confirmed: confirmingProviderIds.length > 0,
+    confirmingProviderIds,
+  };
+}
+
 export async function getTokenEnrichment(
   mint: string,
 ): Promise<TokenEnrichmentResponse> {
@@ -75,64 +172,64 @@ export async function getTokenEnrichment(
         : Promise.resolve<UpstreamResult<XRecentCountsData> | null>(null),
     ]);
 
+  const providers: TokenEnrichmentResponse["providers"] = {
+    solana: providerResult(
+      "solana-rpc",
+      solana,
+      true,
+      "Solana returned confirmed token supply.",
+    ),
+    dexScreener: dexProviderResult(dexScreener),
+    jupiter: providerResult(
+      "jupiter",
+      jupiter,
+      true,
+      jupiter.ok && !jupiter.data.found
+        ? "Jupiter responded but returned no price record for this mint."
+        : getJupiterApiKey()
+          ? "Jupiter returned a current price using the server key."
+          : "Jupiter returned a current price in low-rate keyless mode.",
+    ),
+    helius:
+      meteredProvidersEnabled && helius
+        ? providerResult(
+            "helius",
+            helius,
+            Boolean(getHeliusApiKey()),
+            "Helius DAS returned current indexed asset metadata.",
+          )
+        : gatedProvider("helius", Boolean(getHeliusApiKey()), "Helius"),
+    solanaTracker:
+      meteredProvidersEnabled && solanaTracker
+        ? providerResult(
+            "solana-tracker",
+            solanaTracker,
+            Boolean(getSolanaTrackerApiKey()),
+            "Solana Tracker returned its current token overview.",
+          )
+        : gatedProvider(
+            "solana-tracker",
+            Boolean(getSolanaTrackerApiKey()),
+            "Solana Tracker",
+          ),
+    xRecentCounts:
+      meteredProvidersEnabled && xRecentCounts
+        ? providerResult(
+            "x-api",
+            xRecentCounts,
+            Boolean(getXBearerToken()),
+            "X returned recent exact-contract post-count buckets.",
+          )
+        : gatedProvider("x-api", Boolean(getXBearerToken()), "X API"),
+  };
+
   return {
     mint,
     generatedAt: new Date().toISOString(),
     meteredProvidersEnabled,
+    confirmation: deriveTokenConfirmation(mint, providers),
     warning:
       "Live enrichment is point-in-time evidence, not a validated signal or trading instruction.",
-    providers: {
-      solana: providerResult(
-        "solana-rpc",
-        solana,
-        true,
-        "Solana returned confirmed token supply.",
-      ),
-      dexScreener: providerResult(
-        "dex-screener",
-        dexScreener,
-        true,
-        "DEX Screener returned current Solana pools and paid-order status.",
-      ),
-      jupiter: providerResult(
-        "jupiter",
-        jupiter,
-        true,
-        getJupiterApiKey()
-          ? "Jupiter returned a current price using the server key."
-          : "Jupiter returned a current price in low-rate keyless mode.",
-      ),
-      helius:
-        meteredProvidersEnabled && helius
-          ? providerResult(
-              "helius",
-              helius,
-              Boolean(getHeliusApiKey()),
-              "Helius DAS returned current indexed asset metadata.",
-            )
-          : gatedProvider("helius", Boolean(getHeliusApiKey()), "Helius"),
-      solanaTracker:
-        meteredProvidersEnabled && solanaTracker
-          ? providerResult(
-              "solana-tracker",
-              solanaTracker,
-              Boolean(getSolanaTrackerApiKey()),
-              "Solana Tracker returned its current token overview.",
-            )
-          : gatedProvider(
-              "solana-tracker",
-              Boolean(getSolanaTrackerApiKey()),
-              "Solana Tracker",
-            ),
-      xRecentCounts:
-        meteredProvidersEnabled && xRecentCounts
-          ? providerResult(
-              "x-api",
-              xRecentCounts,
-              Boolean(getXBearerToken()),
-              "X returned recent exact-contract post-count buckets.",
-            )
-          : gatedProvider("x-api", Boolean(getXBearerToken()), "X API"),
-    },
+    providers,
   };
 }

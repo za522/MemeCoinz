@@ -22,11 +22,12 @@ const context = (
   sourceIds: string[],
   fidelity: EvidenceFidelity = "exact",
   commitment: SolanaCommitment = "finalized",
+  availabilityDelaySeconds = 0,
 ): ObservationContext => ({
   elapsedSeconds,
   eventTime: atSecond(elapsedSeconds),
-  observedAt: atSecond(elapsedSeconds),
-  availableAt: atSecond(elapsedSeconds),
+  observedAt: atSecond(elapsedSeconds + availabilityDelaySeconds),
+  availableAt: atSecond(elapsedSeconds + availabilityDelaySeconds),
   commitment,
   canonical: true,
   fidelity,
@@ -470,18 +471,25 @@ const narrativePaidAttention: NarrativePaidAttentionObservation[] =
 const regimeRows: Array<
   Omit<MarketRegimeObservation, keyof ObservationContext> & {
     elapsedSeconds: number;
+    availabilityDelaySeconds?: number;
   }
 > = [
   { elapsedSeconds: 30, solReturnOneHourPct: 1.2, solRealizedVolatilityOneHourPct: 2.1, medianPriorityFeeMicroLamports: 42_000, blockCongestionPct: 48, pumpLaunchesLastHour: 1_940, medianLaunchVolumeFiveMinutesUsd: 4_200, riskAppetiteScore0To100: 68, label: "risk-on" },
-  { elapsedSeconds: 60, solReturnOneHourPct: 1.3, solRealizedVolatilityOneHourPct: 2.2, medianPriorityFeeMicroLamports: 44_000, blockCongestionPct: 51, pumpLaunchesLastHour: 1_955, medianLaunchVolumeFiveMinutesUsd: 4_260, riskAppetiteScore0To100: 69, label: "risk-on" },
+  { elapsedSeconds: 60, availabilityDelaySeconds: 30, solReturnOneHourPct: 1.3, solRealizedVolatilityOneHourPct: 2.2, medianPriorityFeeMicroLamports: 44_000, blockCongestionPct: 51, pumpLaunchesLastHour: 1_955, medianLaunchVolumeFiveMinutesUsd: 4_260, riskAppetiteScore0To100: 69, label: "risk-on" },
   { elapsedSeconds: 300, solReturnOneHourPct: 1.5, solRealizedVolatilityOneHourPct: 2.5, medianPriorityFeeMicroLamports: 53_000, blockCongestionPct: 59, pumpLaunchesLastHour: 2_030, medianLaunchVolumeFiveMinutesUsd: 4_480, riskAppetiteScore0To100: 72, label: "risk-on" },
   { elapsedSeconds: 900, solReturnOneHourPct: 1.1, solRealizedVolatilityOneHourPct: 3.1, medianPriorityFeeMicroLamports: 71_000, blockCongestionPct: 71, pumpLaunchesLastHour: 2_180, medianLaunchVolumeFiveMinutesUsd: 4_910, riskAppetiteScore0To100: 65, label: "congested" },
   { elapsedSeconds: 3_600, solReturnOneHourPct: -0.8, solRealizedVolatilityOneHourPct: 4.6, medianPriorityFeeMicroLamports: 88_000, blockCongestionPct: 76, pumpLaunchesLastHour: 2_340, medianLaunchVolumeFiveMinutesUsd: 4_110, riskAppetiteScore0To100: 47, label: "congested" },
 ];
 
 const marketRegime: MarketRegimeObservation[] = regimeRows.map(
-  ({ elapsedSeconds, ...row }) => ({
-    ...context(elapsedSeconds, ["solana-archive", "market-regime-archive"], "exact"),
+  ({ elapsedSeconds, availabilityDelaySeconds = 0, ...row }) => ({
+    ...context(
+      elapsedSeconds,
+      ["solana-archive", "market-regime-archive"],
+      "exact",
+      "finalized",
+      availabilityDelaySeconds,
+    ),
     ...row,
   }),
 );

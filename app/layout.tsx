@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "MemeTrace · Point-in-time memecoin research",
+    default: "MemeTrace · Memecoin research without false certainty",
     template: "%s · MemeTrace",
   },
   description:
-    "A research-grade console for replaying Pump.fun launches across flow, liquidity, ownership, coordination, narrative, regime, execution, and evidence fidelity.",
+    "Find a Solana coin, inspect point-in-time evidence, and audit every source, limitation, and research claim.",
   applicationName: "MemeTrace",
   keywords: [
     "memecoin research",
@@ -28,26 +28,26 @@ export const metadata: Metadata = {
     "on-chain analysis",
   ],
   openGraph: {
-    title: "MemeTrace · Could this have been known?",
+    title: "MemeTrace · Memecoin research without false certainty",
     description:
-      "Point-in-time evidence, executable outcomes, and honest source fidelity for memecoin research.",
+      "Find a coin, understand the evidence, and audit the research behind every claim.",
     type: "website",
     siteName: "MemeTrace",
     images: [
       {
-        url: "/og.png",
-        width: 1731,
-        height: 909,
-        alt: "MemeTrace: Could this have been known? Point-in-time memecoin research.",
+        url: "/og-v2.png",
+        width: 1200,
+        height: 630,
+        alt: "MemeTrace: Know what was known. Point-in-time memecoin research.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MemeTrace · Could this have been known?",
+    title: "MemeTrace · Memecoin research without false certainty",
     description:
-      "Point-in-time evidence, executable outcomes, and honest source fidelity for memecoin research.",
-    images: ["/og.png"],
+      "Find a coin, understand the evidence, and audit the research behind every claim.",
+    images: ["/og-v2.png"],
   },
 };
 

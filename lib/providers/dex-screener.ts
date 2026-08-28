@@ -7,6 +7,7 @@ import {
   safeFetchJson,
 } from "./http";
 import type {
+  DexComponentAvailability,
   DexPaidOrder,
   DexPairSnapshot,
   DexTokenData,
@@ -120,10 +121,33 @@ function normalizeOrder(value: unknown): DexPaidOrder | null {
   const status = asString(value.status);
   if (!type || !status) return null;
   return {
+    tokenAddress: asString(value.tokenAddress),
     type,
     status,
     paymentTimestamp: asNumber(value.paymentTimestamp),
   };
+}
+
+function componentAvailability<T>(
+  result: UpstreamResult<T>,
+): DexComponentAvailability {
+  return result.ok
+    ? {
+        available: true,
+        checkedAt: result.checkedAt,
+        latencyMs: result.latencyMs,
+        httpStatus: result.httpStatus,
+      }
+    : {
+        available: false,
+        checkedAt: result.checkedAt,
+        latencyMs: result.latencyMs,
+        httpStatus: result.httpStatus,
+        errorCode: result.code,
+        ...(result.retryAfterSeconds === undefined
+          ? {}
+          : { retryAfterSeconds: result.retryAfterSeconds }),
+      };
 }
 
 async function getDexPairs(
@@ -186,14 +210,34 @@ export async function getDexScreenerToken(
     getDexPairs(mint),
     getDexPaidOrders(mint),
   ]);
-  if (!pairs.ok) return pairs;
-  if (!orders.ok) return orders;
+  if (!pairs.ok && !orders.ok) {
+    return {
+      ...pairs,
+      checkedAt: new Date().toISOString(),
+      latencyMs: Math.max(pairs.latencyMs, orders.latencyMs),
+      retryAfterSeconds:
+        pairs.retryAfterSeconds ?? orders.retryAfterSeconds,
+    };
+  }
 
   return {
     ok: true,
-    data: { pairs: pairs.data, paidOrders: orders.data },
+    data: {
+      pairs: pairs.ok ? pairs.data : [],
+      paidOrders: orders.ok ? orders.data : [],
+      availability: {
+        pairs: componentAvailability(pairs),
+        paidOrders: componentAvailability(orders),
+      },
+    },
     checkedAt: new Date().toISOString(),
     latencyMs: Math.max(pairs.latencyMs, orders.latencyMs),
-    httpStatus: 200,
+    // The all-failed branch returned above, so at least one of these is a
+    // successful response with a concrete HTTP status.
+    httpStatus: pairs.ok
+      ? pairs.httpStatus
+      : orders.ok
+        ? orders.httpStatus
+        : 200,
   };
 }

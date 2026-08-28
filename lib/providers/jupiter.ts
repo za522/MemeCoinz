@@ -25,6 +25,7 @@ export async function getJupiterPrice(
         ...result,
         data: {
           mint,
+          found: false,
           usdPrice: null,
           decimals: null,
           blockId: null,
@@ -45,6 +46,10 @@ export async function getJupiterPrice(
     ...result,
     data: {
       mint,
+      found:
+        asNumber(entry.usdPrice) !== null ||
+        asNumber(entry.decimals) !== null ||
+        asNumber(entry.blockId) !== null,
       usdPrice: asNumber(entry.usdPrice),
       decimals: asNumber(entry.decimals),
       blockId: asNumber(entry.blockId),

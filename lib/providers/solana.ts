@@ -109,6 +109,7 @@ export async function getSolanaTokenSupply(
   return {
     ok: true,
     data: {
+      mint,
       amount,
       decimals,
       uiAmount: value ? asNumber(value.uiAmount) : null,
