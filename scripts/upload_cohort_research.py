@@ -9,6 +9,7 @@ and never log BACKFILL_ADMIN_TOKEN.
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 import json
 import os
 import sqlite3
@@ -25,10 +26,57 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--database", required=True, type=Path)
     parser.add_argument("--batch-size", type=int, default=1_000)
+    parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--skip-launches", action="store_true")
     parser.add_argument("--skip-features", action="store_true")
     parser.add_argument("--skip-aggregates", action="store_true")
     return parser.parse_args()
+
+
+def upload_batches(
+    base_url: str,
+    token: str,
+    action: str,
+    batches: Iterable[list[dict[str, Any]]],
+    total: int,
+    workers: int,
+    label: str,
+) -> int:
+    """Upload independent idempotent batches with bounded concurrency."""
+    sent = 0
+    completed_batches = 0
+    started = time.monotonic()
+    iterator = iter(batches)
+    pending: dict[Future[dict[str, Any]], int] = {}
+
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        while len(pending) < workers * 2:
+            try:
+                batch = next(iterator)
+            except StopIteration:
+                break
+            pending[executor.submit(request_json, base_url, token, {"action": action, "rows": batch})] = len(batch)
+
+        while pending:
+            done, _ = wait(pending, return_when=FIRST_COMPLETED)
+            for future in done:
+                batch_size = pending.pop(future)
+                future.result()
+                sent += batch_size
+                completed_batches += 1
+                if completed_batches == 1 or completed_batches % 25 == 0 or sent == total:
+                    elapsed = max(0.001, time.monotonic() - started)
+                    print(
+                        f"{label}: {sent:,}/{total:,} ({sent / max(total, 1):.1%}, "
+                        f"{sent / elapsed:,.0f}/s)",
+                        flush=True,
+                    )
+                try:
+                    batch = next(iterator)
+                except StopIteration:
+                    continue
+                pending[executor.submit(request_json, base_url, token, {"action": action, "rows": batch})] = len(batch)
+    return sent
 
 
 def request_json(base_url: str, token: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -188,6 +236,8 @@ def main() -> None:
     args = parse_args()
     if not 1 <= args.batch_size <= 1_000:
         raise SystemExit("--batch-size must be from 1 to 1000")
+    if not 1 <= args.workers <= 16:
+        raise SystemExit("--workers must be from 1 to 16")
     token = os.environ.get("BACKFILL_ADMIN_TOKEN", "").strip()
     if not token:
         raise SystemExit("BACKFILL_ADMIN_TOKEN is required")
@@ -195,40 +245,34 @@ def main() -> None:
     if not database.is_file():
         raise SystemExit(f"Database not found: {database}")
 
-    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    connection = sqlite3.connect(f"{database.as_uri()}?mode=ro", uri=True)
     try:
         request_json(args.base_url, token, {"action": "manifest"})
         if not args.skip_launches:
             total = int(connection.execute("SELECT COUNT(*) FROM cohort_launches").fetchone()[0])
-            sent = 0
-            started = time.monotonic()
-            for batch_number, batch in enumerate(launch_batches(connection, args.batch_size), start=1):
-                request_json(args.base_url, token, {"action": "rows", "rows": batch})
-                sent += len(batch)
-                if batch_number == 1 or batch_number % 25 == 0 or sent == total:
-                    elapsed = max(0.001, time.monotonic() - started)
-                    print(
-                        f"Launches: {sent:,}/{total:,} ({sent / max(total, 1):.1%}, "
-                        f"{sent / elapsed:,.0f}/s)",
-                        flush=True,
-                    )
+            sent = upload_batches(
+                args.base_url,
+                token,
+                "rows",
+                launch_batches(connection, args.batch_size),
+                total,
+                args.workers,
+                "Launches",
+            )
             if sent != total:
                 raise SystemExit(f"Launch upload stopped at {sent:,}/{total:,}")
 
         if not args.skip_features:
             total = int(connection.execute("SELECT COUNT(*) FROM cohort_launch_features").fetchone()[0])
-            sent = 0
-            started = time.monotonic()
-            for batch_number, batch in enumerate(feature_batches(connection, args.batch_size), start=1):
-                request_json(args.base_url, token, {"action": "features", "rows": batch})
-                sent += len(batch)
-                if batch_number == 1 or batch_number % 25 == 0 or sent == total:
-                    elapsed = max(0.001, time.monotonic() - started)
-                    print(
-                        f"Features: {sent:,}/{total:,} ({sent / max(total, 1):.1%}, "
-                        f"{sent / elapsed:,.0f}/s)",
-                        flush=True,
-                    )
+            sent = upload_batches(
+                args.base_url,
+                token,
+                "features",
+                feature_batches(connection, args.batch_size),
+                total,
+                args.workers,
+                "Features",
+            )
             if sent != total:
                 raise SystemExit(f"Feature upload stopped at {sent:,}/{total:,}")
 
