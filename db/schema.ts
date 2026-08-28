@@ -251,3 +251,67 @@ export const alertDeliveries = sqliteTable(
     ),
   ],
 );
+
+export const cohortImports = sqliteTable(
+  "cohort_imports",
+  {
+    datasetId: text("dataset_id").primaryKey(),
+    datasetVersion: text("dataset_version").notNull(),
+    conceptDoi: text("concept_doi").notNull(),
+    versionDoi: text("version_doi").notNull(),
+    licenseId: text("license_id").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceWindowStart: text("source_window_start").notNull(),
+    sourceWindowEnd: text("source_window_end").notNull(),
+    launchesSha256: text("launches_sha256").notNull(),
+    outcomesSha256: text("outcomes_sha256").notNull(),
+    launchesObjectKey: text("launches_object_key"),
+    outcomesObjectKey: text("outcomes_object_key"),
+    labelPolicy: text("label_policy").notNull(),
+    knownLimitation: text("known_limitation").notNull(),
+    status: text("status").notNull(),
+    expectedLaunches: integer("expected_launches").notNull(),
+    expectedConfirmedFastGraduations: integer("expected_confirmed_fast_graduations").notNull(),
+    expectedRightCensored: integer("expected_right_censored").notNull(),
+    expectedWithoutPublishedOutcome: integer("expected_without_published_outcome").notNull(),
+    importedLaunches: integer("imported_launches").notNull().default(0),
+    importedConfirmedFastGraduations: integer("imported_confirmed_fast_graduations").notNull().default(0),
+    importedRightCensored: integer("imported_right_censored").notNull().default(0),
+    importedWithoutPublishedOutcome: integer("imported_without_published_outcome").notNull().default(0),
+    importedAt: text("imported_at"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("idx_cohort_imports_status").on(table.status)],
+);
+
+/**
+ * Compact, browseable launch index for an externally published cohort.
+ * Raw immutable files live in R2; this table deliberately does not pretend
+ * that the source includes transaction history or complete outcome labels.
+ */
+export const cohortLaunches = sqliteTable(
+  "cohort_launches",
+  {
+    mint: text("mint").primaryKey(),
+    datasetId: text("dataset_id")
+      .notNull()
+      .references(() => cohortImports.datasetId),
+    createdAtMs: integer("created_at_ms").notNull(),
+    seenAtMs: integer("seen_at_ms").notNull(),
+    name: text("name"),
+    symbol: text("symbol"),
+    initialMarketCapSol: real("initial_market_cap_sol"),
+    hasX: integer("has_x", { mode: "boolean" }).notNull(),
+    hasWebsite: integer("has_website", { mode: "boolean" }).notNull(),
+    hasTelegram: integer("has_telegram", { mode: "boolean" }).notNull(),
+    descriptionLength: integer("description_length").notNull(),
+    /** 1 = confirmed fast graduation, 0 = right-censored, -1 = no published outcome. */
+    observedStatus: integer("observed_status").notNull(),
+    observedGraduationAtMs: integer("observed_graduation_at_ms"),
+    observedGraduationMinutes: real("observed_graduation_minutes"),
+  },
+  (table) => [
+    index("idx_cohort_launches_dataset_created").on(table.datasetId, table.createdAtMs),
+    index("idx_cohort_launches_dataset_status").on(table.datasetId, table.observedStatus),
+  ],
+);

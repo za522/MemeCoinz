@@ -27,6 +27,8 @@ The product combines a real launch feed, an evidence report for one exact mint, 
 2. Open one exact mint and inspect what the available evidence supports at `30s`, `1m`, `5m`, `15m`, or `1h` after launch or graduation.
 3. Audit where every field came from, how outcomes and models are defined, how much coverage exists, and what is still unavailable.
 
+The first broad historical launch index is the corrected RED-PUMP-2026-v1 corpus (860,194 unique Pump launches observed from 8 May to 10 June 2026). It is suitable for browsing launch metadata and confirmed fast-graduation evidence. Its `TIMEOUT` rows are right-censored after a short rolling-feed visibility window and must never be treated as failed or unprofitable coins.
+
 ## Screen map
 
 MemeTrace has exactly three top-level screens. Research families are columns or report sections, not additional navigation.

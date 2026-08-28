@@ -28,7 +28,14 @@ interface D1Database {
 
 interface R2Bucket {
   get(key: string): Promise<unknown>;
-  put(key: string, value: ReadableStream | ArrayBuffer | string): Promise<unknown>;
+  put(
+    key: string,
+    value: ReadableStream | ArrayBuffer | string,
+    options?: {
+      httpMetadata?: { contentType?: string };
+      customMetadata?: Record<string, string>;
+    },
+  ): Promise<unknown>;
 }
 
 interface CloudflareEnv {
