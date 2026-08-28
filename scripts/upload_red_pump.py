@@ -69,15 +69,19 @@ def request_json(
     attempts: int = 6,
 ) -> dict[str, Any]:
     data = json.dumps(body, separators=(",", ":")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Content-Length": str(len(data)),
+        "x-backfill-token": token,
+    }
+    sites_bypass_token = os.environ.get("SITES_BYPASS_TOKEN", "").strip()
+    if sites_bypass_token:
+        headers["OAI-Sites-Authorization"] = f"Bearer {sites_bypass_token}"
     request = urllib.request.Request(
         urllib.parse.urljoin(base_url.rstrip("/") + "/", path.lstrip("/")),
         data=data,
         method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Content-Length": str(len(data)),
-            "x-backfill-token": token,
-        },
+        headers=headers,
     )
     for attempt in range(attempts):
         try:
@@ -108,6 +112,9 @@ def upload_file(base_url: str, token: str, path: Path) -> dict[str, Any]:
     connection.putheader("Content-Length", str(expected["bytes"]))
     connection.putheader("x-content-sha256", str(expected["sha256"]))
     connection.putheader("x-backfill-token", token)
+    sites_bypass_token = os.environ.get("SITES_BYPASS_TOKEN", "").strip()
+    if sites_bypass_token:
+        connection.putheader("OAI-Sites-Authorization", f"Bearer {sites_bypass_token}")
     connection.endheaders()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):

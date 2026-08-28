@@ -249,7 +249,7 @@ The engine calculates every family it can, immediately, but it does not invent m
 
 ## Corrected RED-PUMP launch cohort
 
-The app can import [RED-PUMP-2026-v1 v1.4](https://zenodo.org/records/21923106), a CC-BY-4.0 published corpus covering 860,194 unique Pump launches observed from 8 May to 10 June 2026. The protected importer verifies the two frozen gzip files against their published byte counts and SHA-256 values, archives them privately in R2, writes a compact browseable launch index to D1, and marks the import ready only when all four expected counts match exactly.
+The app can import [RED-PUMP-2026-v1 v1.4](https://zenodo.org/records/21923106), a CC-BY-4.0 published corpus covering 860,194 unique Pump launches observed from 8 May to 10 June 2026. The protected importer writes a compact browseable launch index to D1 and marks it ready only when all four expected counts match exactly. The two frozen gzip files can separately be verified against their published byte counts and SHA-256 values and archived privately in R2; `rawFilesStored` reports whether that preservation step has completed.
 
 This is real historical data, but it is not the final supervised-learning cohort. The publisher repeatedly polled a rolling top-50 endpoint, giving a median visibility window of about 2.77 minutes. Its 1,651 `GRADUATED` rows are confirmed fast-regime events. Its 831,290 `TIMEOUT` rows are right-censored after visibility loss and are never converted into failures or negative profit labels. Another 27,253 launches have no published outcome row. The corpus contains launch metadata/social-presence flags, not full transaction paths, wallet graphs, historical X text, size-specific route histories, or executable returns.
 

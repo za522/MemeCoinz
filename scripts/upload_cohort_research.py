@@ -25,6 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--database", required=True, type=Path)
     parser.add_argument("--batch-size", type=int, default=1_000)
+    parser.add_argument("--skip-launches", action="store_true")
     parser.add_argument("--skip-features", action="store_true")
     parser.add_argument("--skip-aggregates", action="store_true")
     return parser.parse_args()
@@ -32,15 +33,19 @@ def parse_args() -> argparse.Namespace:
 
 def request_json(base_url: str, token: str, body: dict[str, Any]) -> dict[str, Any]:
     data = json.dumps(body, separators=(",", ":")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "Content-Length": str(len(data)),
+        "x-backfill-token": token,
+    }
+    sites_bypass_token = os.environ.get("SITES_BYPASS_TOKEN", "").strip()
+    if sites_bypass_token:
+        headers["OAI-Sites-Authorization"] = f"Bearer {sites_bypass_token}"
     request = urllib.request.Request(
         urllib.parse.urljoin(base_url.rstrip("/") + "/", "api/cohort/import"),
         data=data,
         method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "Content-Length": str(len(data)),
-            "x-backfill-token": token,
-        },
+        headers=headers,
     )
     for attempt in range(6):
         try:
@@ -55,6 +60,48 @@ def request_json(base_url: str, token: str, body: dict[str, Any]) -> dict[str, A
                 raise RuntimeError(f"Feature upload failed: {error}") from error
         time.sleep(min(30, 2 ** attempt))
     raise AssertionError("unreachable")
+
+
+def launch_batches(
+    connection: sqlite3.Connection,
+    batch_size: int,
+) -> Iterable[list[dict[str, Any]]]:
+    last_mint = ""
+    while True:
+        rows = connection.execute(
+            """
+            SELECT mint, created_at_ms, seen_at_ms, name, symbol,
+                   initial_market_cap_sol, has_x, has_website, has_telegram,
+                   description_length, observed_status,
+                   observed_graduation_at_ms, observed_graduation_minutes
+            FROM cohort_launches
+            WHERE mint > ?
+            ORDER BY mint
+            LIMIT ?
+            """,
+            (last_mint, batch_size),
+        ).fetchall()
+        if not rows:
+            return
+        yield [
+            {
+                "mint": row[0],
+                "createdAtMs": row[1],
+                "seenAtMs": row[2],
+                "name": row[3],
+                "symbol": row[4],
+                "initialMarketCapSol": row[5],
+                "hasX": bool(row[6]),
+                "hasWebsite": bool(row[7]),
+                "hasTelegram": bool(row[8]),
+                "descriptionLength": row[9],
+                "observedStatus": row[10],
+                "observedGraduationAtMs": row[11],
+                "observedGraduationMinutes": row[12],
+            }
+            for row in rows
+        ]
+        last_mint = rows[-1][0]
 
 
 def feature_batches(
@@ -150,6 +197,24 @@ def main() -> None:
 
     connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
     try:
+        request_json(args.base_url, token, {"action": "manifest"})
+        if not args.skip_launches:
+            total = int(connection.execute("SELECT COUNT(*) FROM cohort_launches").fetchone()[0])
+            sent = 0
+            started = time.monotonic()
+            for batch_number, batch in enumerate(launch_batches(connection, args.batch_size), start=1):
+                request_json(args.base_url, token, {"action": "rows", "rows": batch})
+                sent += len(batch)
+                if batch_number == 1 or batch_number % 25 == 0 or sent == total:
+                    elapsed = max(0.001, time.monotonic() - started)
+                    print(
+                        f"Launches: {sent:,}/{total:,} ({sent / max(total, 1):.1%}, "
+                        f"{sent / elapsed:,.0f}/s)",
+                        flush=True,
+                    )
+            if sent != total:
+                raise SystemExit(f"Launch upload stopped at {sent:,}/{total:,}")
+
         if not args.skip_features:
             total = int(connection.execute("SELECT COUNT(*) FROM cohort_launch_features").fetchone()[0])
             sent = 0
@@ -172,6 +237,10 @@ def main() -> None:
             if rows:
                 request_json(args.base_url, token, {"action": "feature-aggregates", "rows": rows})
             print(f"Aggregates: {len(rows):,}", flush=True)
+        result = request_json(args.base_url, token, {"action": "finalize"})
+        print(json.dumps(result, indent=2), flush=True)
+        if result.get("dataset", {}).get("status") != "ready":
+            raise SystemExit("Remote cohort failed exact final validation")
     finally:
         connection.close()
 

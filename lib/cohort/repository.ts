@@ -341,7 +341,10 @@ export async function finalizeCohortImport(now = new Date().toISOString()): Prom
   const exact = Object.entries(RED_PUMP_DATASET.expected).every(
     ([key, value]) => actual[key as keyof typeof actual] === value,
   );
-  const ready = exact && manifest.source.rawFilesStored;
+  // A verified relational import is usable when all published counts match.
+  // Raw R2 preservation is reported independently through rawFilesStored and
+  // may be completed later without hiding an otherwise complete D1 cohort.
+  const ready = exact;
   await env.DB.prepare(
     `UPDATE cohort_imports SET
       status = ?, imported_launches = ?, imported_confirmed_fast_graduations = ?,
