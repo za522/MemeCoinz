@@ -10,6 +10,7 @@ import type {
   DexComponentAvailability,
   DexPaidOrder,
   DexPairSnapshot,
+  DexTokenProfile,
   DexTokenData,
   UpstreamResult,
 } from "./types";
@@ -26,6 +27,28 @@ function invalidFrom<T>(
     checkedAt: result.checkedAt,
     latencyMs: result.latencyMs,
     httpStatus: result.httpStatus,
+  };
+}
+
+function normalizeProfile(value: unknown): DexTokenProfile | null {
+  if (!isRecord(value)) return null;
+  const tokenAddress = asString(value.tokenAddress);
+  const chainId = asString(value.chainId);
+  if (!tokenAddress || !chainId) return null;
+  return {
+    tokenAddress,
+    chainId,
+    url: asString(value.url),
+    icon: asString(value.icon),
+    header: asString(value.header),
+    description: asString(value.description),
+    links: getArray(value, "links").flatMap((entry) => {
+      if (!isRecord(entry)) return [];
+      const url = asString(entry.url);
+      return url
+        ? [{ type: asString(entry.type), label: asString(entry.label), url }]
+        : [];
+    }).slice(0, 12),
   };
 }
 
@@ -239,5 +262,55 @@ export async function getDexScreenerToken(
       : orders.ok
         ? orders.httpStatus
         : 200,
+  };
+}
+
+/** Current pair snapshots for up to 30 addresses per DEX Screener request. */
+export async function getDexScreenerTokensBatch(
+  mints: string[],
+): Promise<UpstreamResult<DexPairSnapshot[]>> {
+  const unique = [...new Set(mints)].slice(0, 30);
+  if (unique.length === 0) {
+    return {
+      ok: true,
+      data: [],
+      checkedAt: new Date().toISOString(),
+      latencyMs: 0,
+      httpStatus: 200,
+    };
+  }
+  const url = new URL(
+    `/tokens/v1/solana/${unique.map(encodeURIComponent).join(",")}`,
+    DEX_SCREENER_BASE,
+  );
+  const result = await safeFetchJson<unknown>(url, { timeoutMs: 6_000 });
+  if (!result.ok) return result;
+  if (!Array.isArray(result.data)) return invalidFrom(result);
+  return {
+    ...result,
+    data: result.data.flatMap((pair) => {
+      const normalized = normalizePair(pair);
+      return normalized ? [normalized] : [];
+    }),
+  };
+}
+
+/**
+ * DEX Screener's public latest-profile surface is a partial discovery fallback.
+ * It is never described as a complete launch cohort.
+ */
+export async function getLatestDexTokenProfiles(): Promise<
+  UpstreamResult<DexTokenProfile[]>
+> {
+  const url = new URL("/token-profiles/latest/v1", DEX_SCREENER_BASE);
+  const result = await safeFetchJson<unknown>(url, { timeoutMs: 6_000 });
+  if (!result.ok) return result;
+  if (!Array.isArray(result.data)) return invalidFrom(result);
+  return {
+    ...result,
+    data: result.data.flatMap((profile) => {
+      const normalized = normalizeProfile(profile);
+      return normalized ? [normalized] : [];
+    }),
   };
 }

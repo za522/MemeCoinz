@@ -27,6 +27,11 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     category: "Data",
   },
   {
+    term: "Metered provider gate",
+    definition: "An explicit server switch and request authorization required before the app may call a quota-consuming provider, even when its API key is installed.",
+    category: "Data",
+  },
+  {
     term: "Archive / archival data",
     definition: "Historical records retained far enough back to reconstruct past events. An endpoint can serve current data without providing a complete archive.",
     category: "Data",
@@ -77,7 +82,12 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
   },
   {
     term: "Collector",
-    definition: "A background service that requests or receives source data, timestamps it, validates it, and stores the raw response plus normalized observations.",
+    definition: "A process that requests or receives source data, timestamps it, validates it, and may store normalized evidence. A request-driven collector and a continuously scheduled collector have different coverage.",
+    category: "Data",
+  },
+  {
+    term: "Pipeline runner",
+    definition: "A protected process that executes one bounded collection, outcome, model, or alert pass. It is not continuous unless a separate scheduler invokes it repeatedly.",
     category: "Data",
   },
   {
@@ -320,6 +330,16 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     whyItMatters: "This is the outcome a realistic strategy can target, unlike an optimistic chart return.",
   },
   {
+    term: "Execution quote",
+    definition: "A short-lived provider estimate for one exact trade size, direction, route, and slippage setting. It is not a fill, transaction, or historical price.",
+    category: "Execution",
+  },
+  {
+    term: "Execution path",
+    definition: "A point-in-time entry plus realistically available exit samples and explicit coverage through the outcome horizon. Two current buy/sell quotes are a probe, not a complete path.",
+    category: "Execution",
+  },
+  {
     term: "Failed exit",
     definition: "An attempted or modeled sell that cannot complete at the required size or time, rather than being valued at an optimistic displayed price.",
     category: "Execution",
@@ -397,6 +417,16 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     definition: "The live system records the prediction and hypothetical action before the outcome but sends no trade.",
     category: "Execution",
     whyItMatters: "It tests live timing and availability without placing capital at risk.",
+  },
+  {
+    term: "Shadow prediction / alert",
+    definition: "A shadow prediction is recorded before its outcome; an alert may notify someone about it. Neither places or authorizes a trade.",
+    category: "Execution",
+  },
+  {
+    term: "Delivery deduplication",
+    definition: "Recording a prediction/channel pair after an alert attempt so a successfully delivered research alert is not sent repeatedly.",
+    category: "Execution",
   },
   {
     term: "Slippage",
@@ -671,6 +701,11 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     whyItMatters: "A ranked score is not a usable probability unless its confidence matches observed frequencies.",
   },
   {
+    term: "Candidate artifact",
+    definition: "A versioned trained model stored for review but not approved for serving predictions. Candidate status never makes a live probability eligible for an alert.",
+    category: "Research",
+  },
+  {
     term: "Evidence confidence",
     definition: "A separate assessment of source coverage, fidelity, freshness, and finality. It is not the probability of profit.",
     category: "Research",
@@ -709,6 +744,11 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     term: "Label / outcome",
     definition: "The precisely versioned future event being predicted, such as graduation or positive executable return over a fixed horizon and size.",
+    category: "Research",
+  },
+  {
+    term: "Model artifact",
+    definition: "The immutable versioned output of training, including feature definitions, target, preprocessing, parameters, validation policy, metrics, and dataset fingerprint.",
     category: "Research",
   },
   {
@@ -758,6 +798,11 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     definition: "Studying only assets that survived long enough to be visible and excluding rapid failures.",
     category: "Research",
     whyItMatters: "Rapid failures are part of the population and must remain in the study.",
+  },
+  {
+    term: "Validated artifact",
+    definition: "A model artifact admitted for serving only after it passes the registered sample, chronological walk-forward, and calibration gates. It does not prove future profitability.",
+    category: "Research",
   },
   {
     term: "Walk-forward validation",
@@ -866,4 +911,3 @@ export const FULL_GLOSSARY_TERMS: GlossaryTerm[] = [
     whyItMatters: "Raw mentions are easy to manufacture, so identity-safe matching and quality features are essential.",
   },
 ];
-

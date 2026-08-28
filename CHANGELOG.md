@@ -4,6 +4,58 @@ User-visible project changes are recorded here.
 
 ## Unreleased
 
+## 0.4.0 · 2026-08-28
+
+### Added
+
+- A real Coins feed that requests recent Pump and PumpSwap launches automatically, supports manual refresh and local filters, and opens an exact-mint report.
+- Exact official Pump `create`/`createV2` and PumpSwap pool/migration decoding over bounded Solana JSON-RPC signature pages, with scan counts, event ranges, continuation cursors, fidelity, and partial-coverage reasons.
+- An explicitly selection-biased DEX Screener paid-profile fallback when canonical bounded discovery returns no usable rows, plus optional Solana Tracker acceleration when an authorized key is configured.
+- Real per-mint history collection for recent transactions, balance changes, transfers, fee payer/fees, supply, largest token accounts, and priority-fee regime, with known reconstruction limits.
+- A status-only collection control and authenticated bounded provider collector. GET performs no fetch/write; POST caps the window/pages/order sizes and gates metered calls behind request authorization, a global cost switch, and server credentials.
+- Bounded adapters for Helius address history; Solana Tracker trades, holders/chart, bundler/risk classifications, and deployer history; X exact-mint/official-URL/full-name posts and counts; Jupiter read-only size-specific round trips; and current Jito tip context.
+- Per-report safe-current collection evidence: public coin research may use timestamped public-lite Jupiter/Jito probes but never authorizes metered Helius/Tracker/X/keyed-Jupiter calls or backdates current rows.
+- Conditional D1 persistence for discovered assets and observations. API responses now distinguish written, read-only, unavailable, and failed storage states.
+- Conditional upsert of elapsed, leakage-audited feature snapshots; future/misaligned rows are refused and storage failure is explicit but nonfatal.
+- A point-in-time feature engine spanning lifecycle/flow, liquidity/execution, ownership/creator, coordination/wash clues, narrative/paid attention, market regime, and evidence quality.
+- Executable outcome definitions that keep labels pending until the horizon and complete exit path mature instead of treating missing exits as losses.
+- A protected, bounded manual outcome materializer that writes only mature labels from complete cutoff-aligned `execution_path` observations and exposes pending/unavailable/invalid/missing-path counts.
+- A supervised research pipeline with point-in-time leakage audit, token-grouped chronological walk-forward validation, calibration, PR-AUC, Brier score, precision-at-k, net return/EV, drawdown, feature relationships, and family ablations.
+- A model API that trains only when persisted point-in-time examples meet minimum cohort/class requirements and otherwise reports **Insufficient data**.
+- Protected persistence for immutable candidate/validated model artifacts. Validated status is refused unless the calibrated chronological serving gates pass.
+- Validated-artifact lookup in the coin report path, with eligible predictions persisted in shadow mode and no trade action.
+- A disabled-by-default, protected Telegram delivery runner for threshold-passing validated shadow predictions, with dry-run support and per-prediction/channel deduplication.
+- A protected POST-only pipeline runner for one bounded end-to-end maintenance pass: discovery, detail/optional advanced collection, every elapsed clock/cutoff snapshot, validated-only shadow lookup, mature outcomes, candidate-only training, and optional Telegram delivery.
+
+### Changed
+
+- Replaced the synthetic-first Coins experience with real source rows; an exact-mint lookup remains available as a secondary path.
+- Reframed the Coin report around one exact mint, a launch/graduation reference clock, registered cutoffs, observed versus engineered evidence, hindsight outcomes, and model readiness.
+- Updated product and design memory so the feed, report, source coverage, missingness, and model truth are the durable three-screen contract.
+- Kept opportunity, integrity risk, tradability, and evidence quality separate; no opaque Buy Score or automatic-trade action was introduced.
+- Removed the legacy public synthetic-research fixture route and dead client report path so the shipped screens and APIs do not mix invented and real coin evidence.
+
+### Data and limitations
+
+- The public RPC collector is request-driven and intentionally bounded. It is not a continuous collector, an archive-complete backfill, or proof that every launch is present.
+- DEX Screener latest profiles reflect paid-profile activity and are not a neutral denominator of Pump launches.
+- Historical RPC availability time is reconstructed from block time plus a documented assumption when prospective arrival time was not recorded.
+- The current environment has no Helius, Solana Tracker, X, or production Jupiter credential and no complete historical cohort.
+- Advanced adapters are implemented but credentialed branches have not produced a live local corpus. Jupiter/Jito probes are current request-time evidence, not continuous or historical collection.
+- X archive event time and Solana Tracker historical fields keep retrieval-time availability when original indexing latency is unknown; mutable engagement/profile and risk fields are never silently backdated.
+- No model is presented as trained or validated until enough real, matured, point-in-time examples exist. No predictive edge or profitability is claimed.
+- Telegram delivery remains disabled and unconfigured in this environment; no eligible validated prediction or delivered alert is claimed.
+- The manual pipeline runner has no cron/background trigger, defaults metered providers and alert delivery off, and can never promote a candidate model or submit a transaction.
+- The executable-label engine and bounded manual materializer exist, but no scheduler or current collector builds complete `execution_path` sequences across each horizon; no usable outcome cohort is claimed.
+- Narrative embeddings, resolved holder-owner graphs, archive-complete bundle evidence, a running alert scheduler, paper trading, and automatic trading remain unavailable.
+
+### UI and performance
+
+- No external UI package, chart library, data grid, or animation runtime was added.
+- The feed is bounded to at most 100 rows per response and token artwork reserves dimensions and lazy-loads.
+- A clean 0.4.0 production build measured 143,844 bytes gzip across the comparable client assets (138,117 JavaScript + 5,727 CSS), 3,876 bytes (+2.8%) above the 0.3.0 baseline; this is recorded as a cost, not an improvement claim.
+- The research-console chunk measured 26,544 bytes gzip, up from 24,015 bytes.
+
 ## 0.3.0 · 2026-08-28
 
 ### Added

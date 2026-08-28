@@ -1,6 +1,6 @@
 ---
 name: "MemeTrace"
-description: "A research interface for finding a memecoin, inspecting what was knowable at a chosen time, and auditing the evidence behind every claim."
+description: "A point-in-time research app for discovering Solana memecoin launches, comparing their evidence, and testing whether early information predicts executable outcomes."
 register: "product"
 updated: "2026-08-28"
 ---
@@ -9,124 +9,145 @@ updated: "2026-08-28"
 
 ## Purpose
 
-MemeTrace helps beginners, quantitative traders, and researchers investigate fast-moving memecoins without trusting a leaderboard or one opaque score. The first controlled market is Pump.fun on Solana; success means a user can find a coin, understand what the evidence does and does not support at a chosen cutoff, and trace every important term and source.
+MemeTrace helps a beginner or quantitative researcher answer one narrow question: **using only information available at a chosen moment after a Solana memecoin launched or graduated, could we have identified coins that later produced a defined, executable outcome?**
 
-MemeTrace is a research product. It is not an automatic trader, a profitability promise, or a substitute for financial, legal, or compliance advice.
+The product combines a real launch feed, an evidence report for one exact mint, and a leakage-safe research pipeline. It is not an automatic trader, a profitability promise, or financial, legal, or compliance advice.
 
 ## People
 
-- Primary user: a curious but non-expert memecoin researcher who wants a disciplined starting point.
-- Secondary users: quantitatively minded traders and analysts who need point-in-time evidence, denominators, and reproducible definitions.
-- Starting knowledge: mixed. Every necessary specialist term must link to a short plain-English definition.
-- Setting: deliberate desktop research first, with tablet and phone support for checking a coin or source state. The visual environment is daylight or ordinary room light, not a dark trading terminal.
-- Accessibility: WCAG 2.2 AA target, visible focus, keyboard and touch operation, reduced motion, and no status communicated by colour alone.
+- Primary user: a curious non-expert who wants to investigate new memecoins without learning several terminals first.
+- Secondary user: a researcher who needs exact definitions, missingness, timestamps, denominators, and reproducible model validation.
+- Starting knowledge: mixed. Necessary specialist terms must have a short plain-English definition.
+- Setting: desktop research first, with tablet and phone support for monitoring the feed or opening a coin report.
+- Accessibility: WCAG 2.2 AA target, visible focus, keyboard and touch operation, Reduced Motion, and no colour-only state.
 
 ## Core jobs
 
-1. Check current evidence for an exact Solana address, or intentionally open the labelled demonstration. Historical search is not available yet.
-2. Understand one coin at a selected decision cutoff without mixing opportunity, integrity risk, tradability, and evidence quality.
-3. Audit the sources, coverage, research method, validation state, release history, and terminology.
+1. Review a real, automatically refreshed feed of recently discovered Pump/PumpSwap coins and compare observed market, flow, and research fields.
+2. Open one exact mint and inspect what the available evidence supports at `30s`, `1m`, `5m`, `15m`, or `1h` after launch or graduation.
+3. Audit where every field came from, how outcomes and models are defined, how much coverage exists, and what is still unavailable.
 
 ## Screen map
 
-MemeTrace has exactly three top-level screens. Feature pillars are details inside a coin report, not separate product screens.
+MemeTrace has exactly three top-level screens. Research families are columns or report sections, not additional navigation.
 
 | Screen | One primary task | Content that leads | Success |
 |---|---|---|---|
-| **Coins** | Find a coin | Mint search, real source result, honest empty/error state, and one clearly labelled demo entry | The user selects real current evidence or knowingly chooses the synthetic demonstration |
-| **Coin report** | Understand one coin at a cutoff | Identity, data mode, cutoff/as-of time, four separate assessments, and concise evidence summary | The user can explain what is known, uncertain, unavailable, and worth opening in detail |
-| **Data & methods** | Audit the research | Source connections and rights, coverage, method, validation state, release notes, and searchable glossary | The user can trace a claim, understand a term, and see what has not been built or validated |
+| **Coins** | Explore live coins | Real coin rows, age/stage, observed fields, filters, refresh state, and coverage | The user can select a real mint and understands whether discovery was canonical, accelerated, paid-profile-only, partial, or unavailable |
+| **Coin report** | Understand this coin | Exact identity, reference clock, cutoff, point-in-time evidence, missing fields, outcomes, and model state | The user can separate observations from engineered features, hindsight labels, and untrained predictions |
+| **Data & methods** | Audit the research | Source interfaces and rights, collection coverage, feature/label definitions, validation, releases, and terminology | The user can trace a claim and see the prerequisites for a defensible result |
 
-Do not restore the old Research Lab, Data Coverage, or Live Shadow navigation. Prospective collection may later be documented as a data state; it is not a fourth screen or a user-facing mode.
+Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or a documentation menu inside every screen.
 
 ## Screen contracts
 
 ### Coins
 
-- Accept one base58 Solana address, then report whether returned provider evidence confirms it as a token mint. Do not query by ticker alone.
-- Submit explicitly; do not spend metered quota while the user types.
-- Show loading, malformed-address, unconfirmed-token, no-pair, source-error, and partial-provider states in plain language.
-- A real lookup shows only current point-in-time source evidence that actually returned.
-- Keep the synthetic fixture as a separate entry labelled **Demo data**. It must never look like a live market result.
-- No winner-only feed, trending carousel, or implied recommendation.
+- Load a real feed automatically and offer a manual refresh. Do not make the user paste a contract before seeing coins.
+- Use **Explore live coins** as the current task heading. Launch tracking is the research goal, but the current bounded/paid-profile mix is not complete enough to call every returned row a newly observed launch.
+- Treat the feed as **recent discovery from bounded requests**, not a complete list of every launch. Show the active discovery sources, scan counts, oldest/newest event times, continuation state, and warnings.
+- Prefer exact Pump/PumpSwap create events decoded from Solana. When that bounded scan returns no usable launches, a DEX Screener paid-profile feed may supply a clearly labelled, biased fallback; an authorized Solana Tracker key may accelerate discovery.
+- Allow local filtering by exact mint, name, ticker, and lifecycle stage. Ticker matching is navigation only, never identity proof; every report is keyed by the exact mint.
+- Keep observed market/flow fields separate from calculated research fields. A missing value is **Unavailable**, never zero.
+- Do not show a synthetic coin as the default result, a winner-only list, or an implied recommendation.
 
 ### Coin report
 
-- Lead with token identity, exact mint, **Live current lookup** or **Synthetic demo** label, selected cutoff, and as-of time.
-- Keep four outputs separate: **Opportunity**, **Integrity risk**, **Tradability**, and **Evidence quality**.
-- “Tradability” is the beginner-facing name for executability: whether the stated size could plausibly enter and exit after liquidity, price impact, latency, fees, and failures.
-- For the synthetic demo, allow the registered `30s`, `1m`, `5m`, `15m`, and `1h` cutoffs and keep the unvalidated-fixture warning visible.
-- For a real current lookup, do not invent historical cutoffs or model scores. Show current evidence and mark historical/model-dependent outputs unavailable until point-in-time ingestion exists.
-- Default to a short interpretation and the facts that change it. Put formula components, wallet evidence, narrative detail, execution assumptions, provenance, and caveats behind accessible disclosures.
-- Coordination evidence is probabilistic. Never label identity, intent, guilt, or a “cabal” as proven.
+- Lead with name, ticker, exact mint, lifecycle stage, data mode, checked time, and source fidelity.
+- Let the user choose the reference clock (`launch` or `graduation`) and cutoff (`30s`, `1m`, `5m`, `15m`, `1h`). A graduation cutoff is unavailable if no graduation time is known.
+- At each cutoff, use only records whose event and availability times are no later than the decision time. Never fill a historical cutoff with the latest market value.
+- Distinguish four things: **observed inputs**, **engineered features**, **matured outcomes known only in hindsight**, and **model output**. Do not style an engineered heuristic as a probability.
+- Keep opportunity, integrity risk, tradability, and evidence quality separate. Never average them into one Buy Score.
+- Expose feature families for lifecycle/flow, liquidity/execution, ownership/creator, coordination/wash clues, narrative/paid attention, market regime, and source fidelity. Each family must show coverage and missing reasons.
+- Coordination is probabilistic. Common funders, early-buyer recurrence, atomic ordering, synchronized transfers, and exits are clues, not proof of common control or misconduct.
+- A model prediction may appear only from a versioned trained artifact that passed point-in-time audit and chronological validation. Otherwise show **Not trained** or **Insufficient data**.
+- Automatic trading remains disabled. No report may use “buy now,” “safe,” or equivalent instruction language.
 
 ### Data & methods
 
-- Combine source registry, connection health, current coverage, source rights, methodology, validation protocol, release notes, and terminology in one auditable reading screen.
-- State the exact upstream interface, credential, time coverage, limitation, and commercial-use boundary for each provider.
-- Keep glossary search and category filtering local and immediate.
-- Explain `available_at`, fidelity, missingness, labels, walk-forward validation, costs, and false-positive controls in beginner language.
-- Release notes say what changed and what remains unavailable. Connection health never implies a profitable or complete dataset.
+- Combine source registry, connection health, current collection coverage, data rights, feature definitions, outcome definitions, model validation, releases, and terminology in one auditable reading screen.
+- For each source, state the exact interface, credential, time coverage, fidelity, limitation, and commercial-use boundary.
+- Explain `event_at`, `observed_at`, `available_at`, reference clocks, cutoffs, fidelity, missingness, executable labels, calibration, and walk-forward validation in plain language.
+- Connection health means an interface responded. It does not mean collection is continuous, historical coverage is complete, or the app has a predictive edge.
+
+## Research contract
+
+- Unit of analysis: one exact mint × one reference clock × one cutoff.
+- Registered cutoffs: `30`, `60`, `300`, `900`, and `3,600` seconds.
+- Example primary label: whether a stated USD position reached a net executable `2×` before falling to `0.5×` within a stated horizon, after modeled entry/exit costs and only when the observation path is complete.
+- Labels remain pending until the full horizon and its coverage have matured. Missing exits do not silently become losing trades.
+- Validation is chronological and token-grouped. A token cannot appear in both training and test, training labels must have matured before the test period, and the pipeline reports calibration, PR-AUC, Brier score, precision at the selected fraction, net return/EV, drawdown, feature relationships, and family ablations.
+- Training is gated by minimum cohort and class counts. Passing the software tests is not evidence that a trading model works.
 
 ## Inputs and data
 
-- User inputs: exact Solana mint, demo selection, report cutoff, details disclosures, glossary search, and glossary category.
-- Repository data: one synthetic replay fixture; versioned research calculations; provider definitions; release notes; glossary; D1 schema; and R2 binding contract.
-- Live public data: Solana RPC health/slot and current token supply; current DEX Screener token pairs and paid orders; Jupiter Price v3; Jito read-only endpoint health.
-- Optional credentialed data: Helius DAS `getAsset`, Solana Tracker current token overview, and X recent exact-mint counts. Each requires its server secret; the metered token route also requires `TOKEN_ENRICHMENT_METERED_ENABLED=true`.
-- Manual or restricted references: Pump.fun consumer pages, Fomo.family, Photon MemeScope, and memescope.net are not scraped. Their exact policy is recorded in Data & methods.
-- Stored user data: none. There are no accounts, portfolios, wallets, orders, or personal histories.
-- Persisted provider data: none in the current release. D1/R2 schemas and bindings exist, but current lookups are not yet an ingested research dataset.
-- Unknown or unavailable: complete Pump/PumpSwap event history, historical cohort, historical route quotes, old proprietary ranks, unaudited social engagement snapshots, trained model performance, prospective shadow results, and live trading.
+- User inputs: feed query, stage and column filters, refresh choice, exact mint lookup, reference clock, cutoff, report disclosures, glossary query, and glossary category.
+- Canonical public input: bounded Solana JSON-RPC signature/transaction reads for the official Pump and PumpSwap programs, decoded only when exact supported instruction discriminators match.
+- Current per-mint public input: recent mint transactions, token supply, largest token accounts, recent priority-fee samples, DEX Screener token pairs/orders, and Jupiter current price where available.
+- Partial discovery fallback: DEX Screener latest token profiles for Solana. This is paid-profile discovery, not a neutral or complete launch denominator.
+- Protected bounded collection input: Helius address history; Solana Tracker trades, holders/chart, bundler/risk classifications, and deployer history; X exact-mint/official-URL/full-name post search and counts; current Jupiter size-specific round-trip quotes; and current global Jito tip context. Metered Helius/Tracker/X or keyed Jupiter calls require explicit request authorization, the global cost gate, and the provider credential. No such provider credential is installed in the current local environment.
+- Protected manual pipeline input: one bounded request may orchestrate discovery, one detail load per selected coin, optional advanced collection, every elapsed clock/cutoff snapshot, exact validated-artifact shadow lookup, matured-outcome materialization, candidate-only training, and optional Telegram delivery. It is an operator runner, not a scheduler or trading engine.
+- Manual/reference-only sites: Pump.fun consumer pages, Fomo.family, Photon MemeScope, and memescope.net are not scraped.
+- Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only. R2 remains the declared destination for immutable raw evidence but is not populated here.
+- Repository research code: point-in-time feature derivation, executable outcome labels, dataset leakage audit, regularized logistic ensemble training, calibration, chronological validation, relationships, ablations, and prediction intervals.
+- Unknown or unavailable in the current local environment: a complete historical Pump/PumpSwap cohort, continuous background capture, actual historical provider latency, resolved holder ownership, full narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
 
-Never describe fixture, current lookup, configured storage, or an adapter health check as an ingested historical cohort.
-
-## Current release: 0.3.0
+## Current release: 0.4.0
 
 ### Available
 
-- A three-screen product contract: Coins, Coin report, and Data & methods.
-- Exact-address current lookup through server-only provider adapters, with token confirmation reported separately from base58 shape.
-- Public health adapters for Solana RPC, DEX Screener, Jupiter Price v3, and Jito read-only evidence. They were manually smoke-tested during development; automated tests verify contracts and tolerate upstream outages.
-- Credential-gated Helius, Solana Tracker, and X adapters with secrets kept server-side.
-- A clearly labelled synthetic point-in-time demonstration across all research pillars.
-- Separate opportunity, integrity-risk, tradability, and evidence-quality explanations.
-- Source ledger, methodology, release notes, and beginner terminology.
+- A real Coins feed backed by bounded public Solana Pump/PumpSwap discovery, with honest coverage and cursors.
+- A clearly labelled DEX Screener paid-profile fallback and optional Solana Tracker acceleration.
+- Real per-mint detail/history collection for recent transactions plus current supply, largest accounts, priority-fee regime, market enrichment, provenance, and missingness.
+- A status-only collection control plus authenticated, bounded per-mint provider collection. Public GET consumes no quota; protected POST can collect the implemented Helius, Solana Tracker, X, Jupiter, and Jito evidence under explicit cost and credential gates.
+- Conditional D1 persistence for assets, observations, and eligible point-in-time feature snapshots; existing aligned outcomes are read when present, and every write/read state is reported.
+- A point-in-time feature and executable-label engine spanning every planned research family, while preserving unavailable inputs as unavailable.
+- A protected manual outcome materializer that refuses pending, partial, missing, invalid, or misaligned execution paths instead of converting them into losing labels.
+- A strict supervised-model pipeline that audits leakage, trains only with enough real data, and returns an explicit insufficient-data state otherwise.
+- A protected manual pipeline runner that executes one bounded end-to-end maintenance pass across at most 10 coins. Metered collection is off by default, Telegram is opt-in/dry-run by default, and candidate models are never promoted automatically.
+- Protected candidate/validated model-artifact persistence, validated-only shadow prediction serving, and a disabled-by-default Telegram delivery runner with probability thresholding and delivery deduplication.
+- Exactly three user-facing screens and no synthetic coin as the default experience.
 
-### Not available
+### Not available or not yet demonstrated
 
-- No ingested historical Pump.fun cohort.
-- No running Pump/PumpSwap decoder, archive backfill, or continuous launch collector.
-- No provider-response persistence into D1/R2.
-- No authenticated Helius, Solana Tracker, or X feed in the current deployment.
-- No trained or validated forecast and no demonstrated trading edge.
-- No paper portfolio, prospective shadow predictions, wallet execution, or automatic trading.
+- The bounded live scan is not a complete launch denominator, archive backfill, or always-on collector.
+- No real cohort large enough to train or validate a model has been established in this environment.
+- No matching validated model artifact or eligible shadow prediction currently exists, so the alert runner has nothing it may truthfully deliver.
+- No scheduler or current collector builds complete `execution_path` sequences across an outcome horizon; the manual materializer can label only qualifying paths that already exist in D1.
+- No forecast, feature importance, confidence interval, or profitability claim is shown as validated merely because its calculation code exists.
+- No Helius, Solana Tracker, X, or production Jupiter credential is installed here.
+- Therefore the credentialed collector branches are implemented but have not produced a live local corpus; status or adapter code is not evidence of provider coverage.
+- DEX Screener paid-profile discovery is selection-biased and cannot measure the base rate of all Pump launches.
+- Historical `available_at` reconstructed from block time plus an assumption is lower fidelity than prospectively recorded arrival time.
+- Holder account ownership, common-funder graphs, atomic bundle membership, narrative authenticity, and size-specific historical exits remain incomplete when the required observations are absent.
+- Telegram delivery is disabled and unconfigured by default and runs only through a protected request; there is no scheduler or evidence of a delivered alert in this environment.
+- The manual pipeline has no cron or background trigger; it does not make the request-driven feed continuous or the cohort complete.
+- No wallet connection, order submission, paper portfolio, or automatic trading.
 
 ## Later
 
-- Ingest a contiguous, outcome-independent Pump.fun cohort after the versioned decoder, archive provider, reconciliation checks, and D1/R2 write path are complete.
-- Capture prospective social, quote, latency, failure, bundle, and source-health observations that history cannot recreate.
-- Train and walk-forward validate outcomes only after point-in-time coverage and executable-return labels pass audit.
-- Consider paper trading only after calibrated out-of-sample evidence exists.
-- Consider constrained execution only after paper evidence, operational controls, jurisdiction review, provider terms, and explicit user authorization all pass.
+- Run a durable, continuously monitored collector plus archive backfill over a contiguous, outcome-independent cohort and publish reconciliation/coverage reports.
+- Schedule the authenticated collector prospectively so X identity-matched posts, Jupiter size-specific routes, Jito context, provider failures/latency, and source health are actually retained; add embeddings, exact slot ordering, wallet-owner resolution, and token-specific bundle evidence where lawful and technically available.
+- Collect complete execution paths and schedule feature/outcome materialization for all cutoffs, train only after the cohort passes audit, then publish walk-forward results with denominators and uncertainty.
+- Operate the optional alert runner only after a validated artifact, explicit probability threshold, delivery credentials, and scheduler controls are reviewed; alerts remain research notifications, not trade instructions.
+- Consider paper execution and then constrained live execution only after validated out-of-sample evidence, operational controls, provider terms, jurisdiction review, and a separate explicit authorization.
 
 ## Non-goals
 
-- A casino terminal, urgency feed, or one-tap trading interface.
-- A single Buy Score that hides conflicting evidence.
-- A winner-only leaderboard or performance claim without the full denominator.
-- Proof of wallet identity, manipulation, or misconduct from clustering alone.
+- A casino terminal, urgency feed, one-tap trading surface, or automatic buy trigger.
+- A single opaque score that hides conflicting evidence.
+- A winner-only leaderboard or performance claim without the full launch denominator.
+- Proof of identity, intent, manipulation, or guilt from wallet clustering.
 - Scraping consumer pages or reverse-engineering private endpoints.
-- Presenting a current API response as a historical point-in-time record.
+- Presenting current data, reconstructed timestamps, or a paid-profile list as complete historical evidence.
 
 ## Product rules
 
 - Exactly three top-level screens: Coins, Coin report, and Data & methods.
 - Every screen has one primary task, and that task is its clearest heading.
-- Real product content leads; technical framing and teaching open only when requested.
-- Demo and live-current states never share an ambiguous label or visual treatment.
-- A missing value stays unavailable; it is never silently changed to zero or borrowed from the present.
+- Real coins and real source states lead; documentation and teaching stay secondary.
+- Every metric identifies its taxonomy, reference clock/cutoff, source/fidelity, and missing state where relevant.
+- A missing value stays unavailable; it is never silently changed to zero or borrowed from the future.
 - Opportunity, integrity risk, tradability, and evidence quality remain separate.
-- Claims match the actual source response, time coverage, implementation, and validation state.
-- A new user can find the next action without reading a paragraph.
+- Claims match actual source responses, coverage, implementation, and validation state.
 - Follow `DESIGN.md` for every interface change.

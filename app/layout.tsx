@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s · MemeTrace",
   },
   description:
-    "Find a Solana coin, inspect point-in-time evidence, and audit every source, limitation, and research claim.",
+    "Explore observed Solana memecoins, inspect point-in-time evidence, and audit every source, limitation, and research claim.",
   applicationName: "MemeTrace",
   keywords: [
     "memecoin research",
@@ -30,15 +30,15 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MemeTrace · Memecoin research without false certainty",
     description:
-      "Find a coin, understand the evidence, and audit the research behind every claim.",
+      "Explore real coins, inspect point-in-time evidence, and audit the research behind every claim.",
     type: "website",
     siteName: "MemeTrace",
     images: [
       {
-        url: "/og-v2.png",
+        url: "/og-v3.png",
         width: 1200,
         height: 630,
-        alt: "MemeTrace: Know what was known. Point-in-time memecoin research.",
+        alt: "MemeTrace: Real coins. Point-in-time evidence.",
       },
     ],
   },
@@ -46,8 +46,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MemeTrace · Memecoin research without false certainty",
     description:
-      "Find a coin, understand the evidence, and audit the research behind every claim.",
-    images: ["/og-v2.png"],
+      "Explore real coins, inspect point-in-time evidence, and audit the research behind every claim.",
+    images: ["/og-v3.png"],
   },
 };
 

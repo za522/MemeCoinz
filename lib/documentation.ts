@@ -28,6 +28,19 @@ export const GLOSSARY_CATEGORIES: Array<"All" | GlossaryCategory> = [
 export const RELEASE_NOTES = [
   {
     date: "28 Aug 2026",
+    title: "Real feed and point-in-time research pipeline",
+    items: [
+      "Replaced the synthetic-first home screen with a real bounded Pump/PumpSwap feed, exact instruction decoding, cursors, and honest fallback coverage.",
+      "Added real per-mint history/current enrichment, provenance, missing reasons, and conditional D1 persistence.",
+      "Added protected bounded Helius/Tracker/X/Jupiter/Jito collection plus a manual end-to-end pipeline runner; public status checks consume no quota or write.",
+      "Added leakage-safe feature/outcome calculation plus a manual materializer that never turns missing paths into losses.",
+      "Added strict walk-forward training, protected artifact persistence, and validated-only shadow predictions; the runner writes candidates only and insufficient data still produces no probability.",
+      "Added a disabled-by-default, deduplicated Telegram research-alert runner; it cannot trade.",
+      "No provider credential, complete cohort, validated artifact, eligible alert, or trading edge is claimed in this environment.",
+    ],
+  },
+  {
+    date: "28 Aug 2026",
     title: "Three-screen product reset",
     items: [
       "Replaced the competing menus with Coins, Coin report, and Data & methods.",

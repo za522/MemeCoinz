@@ -186,6 +186,16 @@ export interface DexPaidOrder {
   paymentTimestamp: number | null;
 }
 
+export interface DexTokenProfile {
+  tokenAddress: string;
+  chainId: string;
+  url: string | null;
+  icon: string | null;
+  header: string | null;
+  description: string | null;
+  links: Array<{ type: string | null; label: string | null; url: string }>;
+}
+
 export interface DexComponentAvailability {
   available: boolean;
   checkedAt: string;
@@ -255,6 +265,13 @@ export interface SolanaTrackerTokenData {
   }>;
 }
 
+export interface SolanaTrackerLatestToken extends SolanaTrackerTokenData {
+  metadataUri: string | null;
+  createdOn: string | null;
+  curvePercentage: number | null;
+  latestPoolMarket: string | null;
+}
+
 export interface XCountBucket {
   start: string;
   end: string;
@@ -266,6 +283,302 @@ export interface XRecentCountsData {
   totalPostCount: number;
   granularity: "minute" | "hour" | "day";
   buckets: XCountBucket[];
+}
+
+export type XArchiveMode = "recent" | "full-archive";
+
+export interface XIdentityQuery {
+  contractAddress: string;
+  fullName?: string | null;
+  officialUrls?: string[];
+}
+
+export interface XPostPublicMetrics {
+  retweetCount: number | null;
+  replyCount: number | null;
+  likeCount: number | null;
+  quoteCount: number | null;
+  bookmarkCount: number | null;
+  impressionCount: number | null;
+}
+
+export interface XPostRecord {
+  id: string;
+  authorId: string | null;
+  createdAt: string;
+  text: string | null;
+  lang: string | null;
+  identityMatches: Array<"exact-contract" | "official-url" | "full-name">;
+  publicMetrics: XPostPublicMetrics;
+  /** X returns these counters as they exist when queried, not as they stood at createdAt. */
+  publicMetricsObservedAt: string;
+  author: {
+    username: string | null;
+    name: string | null;
+    verified: boolean | null;
+    followersCount: number | null;
+    /** User profile metrics are mutable and are never backdated to the post timestamp. */
+    profileObservedAt: string;
+  } | null;
+}
+
+export interface XPostSearchData {
+  query: string;
+  mode: XArchiveMode;
+  requestedStart: string;
+  requestedEnd: string;
+  posts: XPostRecord[];
+  pagesFetched: number;
+  nextToken: string | null;
+  truncated: boolean;
+  caveat: string;
+}
+
+export interface XContractCountsData extends XRecentCountsData {
+  mode: XArchiveMode;
+  requestedStart: string;
+  requestedEnd: string;
+  /** Exact identity clauses actually present in the aggregate query. */
+  identityClasses: Array<"exact-contract" | "official-url" | "full-name">;
+  pagesFetched: number;
+  nextToken: string | null;
+  truncated: boolean;
+}
+
+export interface HeliusTokenBalanceChange {
+  accountIndex: number;
+  owner: string | null;
+  mint: string;
+  decimals: number | null;
+  preRawAmount: string | null;
+  postRawAmount: string | null;
+  rawDelta: string | null;
+  uiDelta: number | null;
+}
+
+export interface HeliusHistoricalTransaction {
+  signature: string;
+  slot: number;
+  transactionIndex: number | null;
+  blockTime: number | null;
+  confirmationStatus: string | null;
+  success: boolean;
+  feeLamports: number | null;
+  feePayer: string | null;
+  accountKeys: string[];
+  nativeBalanceChanges: Array<{
+    account: string;
+    preLamports: number;
+    postLamports: number;
+    deltaLamports: number;
+  }>;
+  tokenBalanceChanges: HeliusTokenBalanceChange[];
+  /** Lossless provider row for durable raw-object storage. Never expose secrets. */
+  raw: Record<string, unknown>;
+}
+
+export interface HeliusAddressHistoryData {
+  address: string;
+  requestedFrom: string;
+  requestedTo: string;
+  commitment: "confirmed" | "finalized";
+  transactions: HeliusHistoricalTransaction[];
+  pagesFetched: number;
+  nextPaginationToken: string | null;
+  truncated: boolean;
+  caveat: string;
+}
+
+export interface SolanaTrackerTrade {
+  signature: string;
+  side: "buy" | "sell" | null;
+  wallet: string | null;
+  tokenAmount: number | null;
+  priceUsd: number | null;
+  volumeUsd: number | null;
+  volumeSol: number | null;
+  eventAt: string;
+  program: string | null;
+  pools: string[];
+  /** Lossless normalized source row for audit/debugging. */
+  raw: Record<string, unknown>;
+}
+
+export interface SolanaTrackerTradesData {
+  mint: string;
+  requestedFrom: string;
+  requestedTo: string;
+  trades: SolanaTrackerTrade[];
+  pagesFetched: number;
+  nextCursor: string | null;
+  truncated: boolean;
+  caveat: string;
+}
+
+export interface SolanaTrackerHolder {
+  wallet: string;
+  tokenAccount: string | null;
+  amount: number | null;
+  valueUsd: number | null;
+  percentage: number | null;
+}
+
+export interface SolanaTrackerHoldersData {
+  mint: string;
+  totalHolders: number | null;
+  holders: SolanaTrackerHolder[];
+  pagesFetched: number;
+  nextCursor: string | null;
+  truncated: boolean;
+  asOf: string;
+  caveat: string;
+}
+
+export interface SolanaTrackerHolderChartPoint {
+  holderCount: number;
+  eventAt: string;
+}
+
+export interface SolanaTrackerHolderChartData {
+  mint: string;
+  requestedFrom: string;
+  requestedTo: string;
+  interval: string;
+  points: SolanaTrackerHolderChartPoint[];
+  caveat: string;
+}
+
+export interface SolanaTrackerBundlerWallet {
+  wallet: string;
+  initialBalance: number | null;
+  initialPercentage: number | null;
+  currentBalance: number | null;
+  currentPercentage: number | null;
+  bundleAt: string | null;
+}
+
+export interface SolanaTrackerBundlersData {
+  mint: string;
+  count: number | null;
+  totalBalance: number | null;
+  totalPercentage: number | null;
+  totalInitialBalance: number | null;
+  totalInitialPercentage: number | null;
+  wallets: SolanaTrackerBundlerWallet[];
+  asOf: string;
+  caveat: string;
+  raw: Record<string, unknown>;
+}
+
+export interface SolanaTrackerRiskFactor {
+  name: string | null;
+  description: string | null;
+  level: string | null;
+  score: number | null;
+}
+
+export interface SolanaTrackerRiskSnapshotData {
+  mint: string;
+  score: number | null;
+  rugged: boolean | null;
+  deployer: string | null;
+  mintAuthority: string | null;
+  freezeAuthority: string | null;
+  topTenPercentage: number | null;
+  developerPercentage: number | null;
+  insiderPercentage: number | null;
+  sniperPercentage: number | null;
+  bundlerCount: number | null;
+  bundlerPercentage: number | null;
+  factors: SolanaTrackerRiskFactor[];
+  asOf: string;
+  caveat: string;
+  raw: Record<string, unknown>;
+}
+
+export interface SolanaTrackerDeployerToken {
+  mint: string;
+  name: string | null;
+  symbol: string | null;
+  createdAt: string | null;
+  graduated: boolean | null;
+  marketCapUsd: number | null;
+  liquidityUsd: number | null;
+}
+
+export interface SolanaTrackerDeployerHistoryData {
+  wallet: string;
+  tokens: SolanaTrackerDeployerToken[];
+  pagesFetched: number;
+  nextPage: number | null;
+  truncated: boolean;
+  total: number | null;
+  asOf: string;
+  caveat: string;
+}
+
+export interface JupiterQuoteRouteLeg {
+  ammKey: string | null;
+  label: string | null;
+  inputMint: string | null;
+  outputMint: string | null;
+  inAmount: string | null;
+  outAmount: string | null;
+  feeAmount: string | null;
+  feeMint: string | null;
+  percent: number | null;
+}
+
+export interface JupiterQuoteProbe {
+  side: "buy" | "sell";
+  requestedAt: string;
+  completedAt: string;
+  latencyMs: number;
+  routeAvailable: boolean;
+  inputMint: string;
+  outputMint: string;
+  inAmount: string;
+  outAmount: string | null;
+  otherAmountThreshold: string | null;
+  priceImpactPct: number | null;
+  contextSlot: number | null;
+  providerTimeTakenSeconds: number | null;
+  routePlan: JupiterQuoteRouteLeg[];
+  failureCode: ProviderErrorCode | "no_route" | null;
+}
+
+export interface JupiterRoundTripProbe {
+  mint: string;
+  orderSizeUsd: number;
+  slippageBps: number;
+  buy: JupiterQuoteProbe;
+  sell: JupiterQuoteProbe | null;
+  expectedRoundTripUsd: number | null;
+  roundTripRetentionPct: number | null;
+  observedAt: string;
+  endpointMode: "keyed" | "public-lite";
+  caveat: string;
+}
+
+export interface JitoTipFloorPoint {
+  eventAt: string;
+  landedTips25thPercentileSol: number | null;
+  landedTips50thPercentileSol: number | null;
+  landedTips75thPercentileSol: number | null;
+  landedTips95thPercentileSol: number | null;
+  landedTips99thPercentileSol: number | null;
+  emaLandedTips50thPercentileSol: number | null;
+}
+
+export interface JitoTipEvidenceData {
+  observedAt: string;
+  tipAccounts: string[];
+  latestTipFloor: JitoTipFloorPoint | null;
+  availability: {
+    tipAccounts: boolean;
+    tipFloor: boolean;
+  };
+  caveat: string;
 }
 
 export interface TokenEnrichmentProvider<T> {

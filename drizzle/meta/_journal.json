@@ -8,6 +8,34 @@
       "when": 1787884121206,
       "tag": "0000_hot_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787916782140,
+      "tag": "0001_nappy_zzzax",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787917698334,
+      "tag": "0002_bouncy_mongoose",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787917803725,
+      "tag": "0003_sloppy_norrin_radd",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787918226971,
+      "tag": "0004_motionless_hercules",
+      "breakpoints": true
     }
   ]
 }

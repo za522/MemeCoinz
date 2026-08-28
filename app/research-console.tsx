@@ -5,10 +5,18 @@
 import {
   type FormEvent,
   type MouseEvent,
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import type {
+  CoinListItem,
+  CoinsListResponse,
+} from "@/lib/coins/types";
+import type { ReferenceClock } from "@/lib/model";
+import type { CoinResearchResponse } from "@/lib/research-pipeline";
 import {
   GLOSSARY_CATEGORIES,
   RELEASE_NOTES,
@@ -18,9 +26,6 @@ import { FULL_GLOSSARY_TERMS } from "@/lib/glossary-full";
 import {
   RESEARCH_CUTOFFS,
   type CutoffLabel,
-  type IllustrativeAssessment,
-  type ResearchReplay,
-  type ResearchSummary,
 } from "@/lib/research";
 import type {
   DexPairSnapshot,
@@ -32,12 +37,10 @@ import type {
 } from "@/lib/providers/types";
 
 export type AppScreen = "coins" | "report" | "methods";
-type ReportMode = "demo" | "current";
 type LookupState = "idle" | "loading" | "success" | "error";
+type CoinFeedState = "loading" | "ready" | "error";
 
 interface ResearchConsoleProps {
-  replay: ResearchReplay;
-  summaries: Record<CutoffLabel, ResearchSummary>;
   initialScreen?: AppScreen;
   initialTerm?: string;
 }
@@ -47,6 +50,14 @@ const PRIMARY_NAV: Array<{ id: AppScreen; label: string }> = [
   { id: "report", label: "Coin report" },
   { id: "methods", label: "Data & methods" },
 ];
+
+const CUTOFF_SECONDS: Record<CutoffLabel, 30 | 60 | 300 | 900 | 3600> = {
+  "30s": 30,
+  "1m": 60,
+  "5m": 300,
+  "15m": 900,
+  "1h": 3_600,
+};
 
 const TOKEN_LOOKUP_PROVIDER_IDS: readonly ProviderId[] = [
   "solana-rpc",
@@ -119,41 +130,35 @@ function shortAddress(value: string) {
   return `${value.slice(0, 8)}…${value.slice(-8)}`;
 }
 
-function assessmentRead(
-  kind: "opportunity" | "integrity" | "tradability" | "evidence",
-  assessment: IllustrativeAssessment,
-) {
-  const band = assessment.band;
-  if (kind === "integrity") {
-    return {
-      low: "Fewer warning clues",
-      moderate: "Some warning clues",
-      high: "Many warning clues",
-      "very-high": "Severe warning clues",
-    }[band];
-  }
-  if (kind === "tradability") {
-    return {
-      low: "Difficult to trade",
-      moderate: "Limited at this size",
-      high: "Plausible in the demo",
-      "very-high": "Strong in the demo",
-    }[band];
-  }
-  if (kind === "evidence") {
-    return {
-      low: "Weak coverage",
-      moderate: "Mixed coverage",
-      high: "Good demo coverage",
-      "very-high": "Strong demo coverage",
-    }[band];
-  }
-  return {
-    low: "Little supporting evidence",
-    moderate: "Mixed supporting evidence",
-    high: "Supportive in the demo",
-    "very-high": "Strong in the demo",
-  }[band];
+function formatAge(value: string | null, now: number) {
+  if (!value) return "Unknown";
+  const elapsed = Math.max(0, Math.floor((now - Date.parse(value)) / 1_000));
+  if (!Number.isFinite(elapsed)) return "Unknown";
+  if (elapsed < 60) return `${elapsed}s`;
+  if (elapsed < 3_600) return `${Math.floor(elapsed / 60)}m`;
+  if (elapsed < 86_400) return `${Math.floor(elapsed / 3_600)}h`;
+  return `${Math.floor(elapsed / 86_400)}d`;
+}
+
+function formatCutoffSeconds(seconds: number) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3_600) return `${seconds / 60}m`;
+  return `${seconds / 3_600}h`;
+}
+
+function coinDisplayName(coin: CoinListItem) {
+  return coin.name?.trim() || "Unnamed token";
+}
+
+function coinDisplaySymbol(coin: CoinListItem) {
+  return coin.symbol?.trim() || "?";
+}
+
+function stageLabel(coin: CoinListItem) {
+  if (coin.lifecycle.stage === "bonding") return "Bonding";
+  if (coin.lifecycle.stage === "graduated") return "Graduated";
+  if (coin.lifecycle.stage === "pool") return "DEX pool";
+  return "Stage unknown";
 }
 
 function matchingDexPair(
@@ -218,10 +223,12 @@ function navigateClient(
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 
-function updateScreenUrl(nextScreen: AppScreen) {
+function updateScreenUrl(nextScreen: AppScreen, mint?: string | null) {
   const url = new URL(window.location.href);
   url.searchParams.set("screen", nextScreen);
   if (nextScreen !== "methods") url.searchParams.delete("term");
+  if (nextScreen === "report" && mint) url.searchParams.set("mint", mint);
+  if (nextScreen !== "report" || mint === null) url.searchParams.delete("mint");
   const nextUrl = `${url.pathname}${url.search}`;
   const currentUrl = `${window.location.pathname}${window.location.search}`;
   if (nextUrl !== currentUrl) window.history.pushState(null, "", nextUrl);
@@ -330,7 +337,7 @@ function CurrentLookupResult({
         </div>
         {confirmed ? (
           <button className="button-primary" type="button" onClick={onOpen}>
-            Open current snapshot
+            Open research report
           </button>
         ) : null}
       </div>
@@ -388,137 +395,287 @@ function CurrentLookupResult({
   );
 }
 
+type CoinColumnGroup = "market" | "flow" | "research";
+
+function CoinFeedTable({
+  coins,
+  group,
+  asOfMs,
+  onOpen,
+}: {
+  coins: CoinListItem[];
+  group: CoinColumnGroup;
+  asOfMs: number;
+  onOpen: (coin: CoinListItem) => void;
+}) {
+  return (
+    <div className="table-scroll coin-table-scroll" role="region" aria-label="Live Pump and Solana coin feed">
+      <table className="coin-table">
+        <caption>Real coins returned by the active discovery sources. Missing values are not treated as zero.</caption>
+        <thead>
+          <tr>
+            <th>Coin</th>
+            <th>Age</th>
+            <th>Stage</th>
+            {group === "market" ? (
+              <>
+                <th>Price</th>
+                <th>Market cap</th>
+                <th>Liquidity</th>
+                <th>24h volume</th>
+              </>
+            ) : null}
+            {group === "flow" ? (
+              <>
+                <th>24h buys</th>
+                <th>24h sells</th>
+                <th>24h change</th>
+                <th>Discovery</th>
+              </>
+            ) : null}
+            {group === "research" ? (
+              <>
+                <th>Latest cutoff</th>
+                <th>Pump probability</th>
+                <th>Integrity evidence</th>
+                <th>Tradability</th>
+              </>
+            ) : null}
+            <th><span className="sr-only">Open report</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {coins.map((coin) => {
+            const primaryProvenance = coin.provenance[0];
+            return (
+              <tr key={coin.mint}>
+                <td>
+                  <div className="coin-identity-cell">
+                    {coin.imageUri ? (
+                      // Token artwork is untrusted remote content. Native img avoids
+                      // proxying arbitrary origins through the image optimiser.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img alt="" decoding="async" height="36" loading="lazy" referrerPolicy="no-referrer" src={coin.imageUri} width="36" />
+                    ) : <span aria-hidden="true">{coinDisplaySymbol(coin).slice(0, 2).toUpperCase()}</span>}
+                    <div>
+                      <strong>{coinDisplayName(coin)} <small>${coinDisplaySymbol(coin)}</small></strong>
+                      <code title={coin.mint}>{shortAddress(coin.mint)}</code>
+                    </div>
+                  </div>
+                </td>
+                <td>{formatAge(coin.createdAt, asOfMs)}</td>
+                <td><span className={`stage-label stage-${coin.lifecycle.stage}`}>{stageLabel(coin)}</span></td>
+                {group === "market" ? (
+                  <>
+                    <td>{formatUsd(coin.market.priceUsd, 8)}</td>
+                    <td>{formatUsd(coin.market.marketCapUsd)}</td>
+                    <td>{formatUsd(coin.market.liquidityUsd)}</td>
+                    <td>{formatUsd(coin.market.volume24hUsd)}</td>
+                  </>
+                ) : null}
+                {group === "flow" ? (
+                  <>
+                    <td>{formatNumber(coin.market.buys24h, 0)}</td>
+                    <td>{formatNumber(coin.market.sells24h, 0)}</td>
+                    <td>{formatPct(coin.market.priceChange24hPct)}</td>
+                    <td>{primaryProvenance?.sourceId ?? "Unavailable"}</td>
+                  </>
+                ) : null}
+                {group === "research" ? (
+                  <>
+                    <td>{coin.research ? `${formatCutoffSeconds(coin.research.cutoffSeconds)} ${coin.research.referenceClock}` : "Not calculated"}</td>
+                    <td>{coin.research?.status === "predicted" && coin.research.probability !== null ? formatPct(coin.research.probability * 100) : <span className="data-pending">Not trained</span>}</td>
+                    <td>{coin.research?.coordinationEvidence0To100 === null || coin.research?.coordinationEvidence0To100 === undefined ? <span className="data-pending">Unavailable</span> : `${formatNumber(coin.research.coordinationEvidence0To100, 0)} / 100`}</td>
+                    <td>{coin.research?.roundTripRetentionPct === null || coin.research?.roundTripRetentionPct === undefined ? "Unavailable" : formatPct(coin.research.roundTripRetentionPct)}</td>
+                  </>
+                ) : null}
+                <td><button className="table-action" onClick={() => onOpen(coin)} type="button">Open</button></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function CoinsScreen({
-  replay,
   registry,
   registryLoading,
+  feed,
+  feedState,
+  feedError,
+  autoRefresh,
   enrichment,
   lookupState,
   lookupError,
   mint,
   onMintChange,
   onSubmit,
-  onOpenDemo,
   onOpenCurrent,
+  onOpenCoin,
+  onLoadMore,
+  onRefresh,
+  onToggleAutoRefresh,
 }: {
-  replay: ResearchReplay;
   registry: SourceRegistryResponse | null;
   registryLoading: boolean;
+  feed: CoinsListResponse | null;
+  feedState: CoinFeedState;
+  feedError: string | null;
+  autoRefresh: boolean;
   enrichment: TokenEnrichmentResponse | null;
   lookupState: LookupState;
   lookupError: string | null;
   mint: string;
   onMintChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onOpenDemo: () => void;
   onOpenCurrent: () => void;
+  onOpenCoin: (coin: CoinListItem) => void;
+  onLoadMore: () => void;
+  onRefresh: () => void;
+  onToggleAutoRefresh: () => void;
 }) {
   const lookupCoverage = lookupRegistryCoverage(registry);
+  const [query, setQuery] = useState("");
+  const [stage, setStage] = useState<"all" | "bonding" | "graduated">("all");
+  const [group, setGroup] = useState<CoinColumnGroup>("market");
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleCoins = useMemo(() => (feed?.coins ?? []).filter((coin) => {
+    const matchesStage = stage === "all" || coin.lifecycle.stage === stage;
+    const haystack = `${coin.name ?? ""} ${coin.symbol ?? ""} ${coin.mint}`.toLowerCase();
+    return matchesStage && (!normalizedQuery || haystack.includes(normalizedQuery));
+  }), [feed?.coins, normalizedQuery, stage]);
+  const canonicalCount = feed?.coins.filter((coin) => coin.canonicalConfirmed).length ?? 0;
+  const feedAsOfMs = feed?.generatedAt ? Date.parse(feed.generatedAt) : 0;
 
   return (
     <>
       <ScreenHeading
         section="Coins"
-        title="Find a coin"
-        description="Paste the exact Solana contract address. Tickers and names are reused, so they are not safe identifiers."
+        title="Explore live coins"
+        description="These are real Solana tokens returned now. Canonical launches and partial discovery rows stay visibly distinct; open any row for its evidence."
       />
 
-      <section className="search-surface" aria-labelledby="mint-search-title">
-        <form onSubmit={onSubmit}>
-          <label htmlFor="mint-search" id="mint-search-title">Solana contract address</label>
-          <div className="search-control">
-            <input
-              id="mint-search"
-              name="mint"
-              onChange={(event) => onMintChange(event.target.value)}
-              placeholder="Paste a base58 mint address"
-              spellCheck={false}
-              value={mint}
-            />
-            <button className="button-primary" disabled={lookupState === "loading"} type="submit">
-              {lookupState === "loading" ? "Checking…" : "Find coin"}
-            </button>
-          </div>
-        </form>
+      <section className="feed-status" aria-labelledby="feed-status-title">
+        <div>
+          <span className="kicker">Live discovery</span>
+          <h2 id="feed-status-title">{feedState === "loading" && !feed ? "Loading real coins" : `${feed?.coins.length ?? 0} coins returned`}</h2>
+          <p>{feed?.generatedAt ? `Last refreshed ${formatTime(feed.generatedAt)}.` : "Waiting for the first discovery response."}</p>
+        </div>
+        <div className="feed-actions">
+          <button aria-pressed={autoRefresh} className="button-secondary" onClick={onToggleAutoRefresh} type="button">
+            Auto-refresh {autoRefresh ? "on" : "off"}
+          </button>
+          <button className="button-primary" disabled={feedState === "loading"} onClick={onRefresh} type="button">
+            {feedState === "loading" ? "Refreshing…" : "Refresh now"}
+          </button>
+        </div>
+      </section>
 
-        <div aria-live="polite" className="lookup-status">
-          {lookupState === "idle" ? <p>Nothing is queried until you press Find coin.</p> : null}
-          {lookupState === "loading" ? <p>Checking current public sources for this mint.</p> : null}
-          {lookupState === "error" ? <p className="error-copy">{lookupError}</p> : null}
+      <section className="coin-feed" aria-labelledby="coin-feed-title">
+        <div className="coin-feed-toolbar">
+          <div className="feed-search">
+            <label htmlFor="coin-feed-search">Filter returned coins</label>
+            <input
+              id="coin-feed-search"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Name, ticker, or exact mint"
+              type="search"
+              value={query}
+            />
+          </div>
+          <div>
+            <span className="control-label">Lifecycle</span>
+            <div className="compact-segments" role="group" aria-label="Filter by lifecycle stage">
+              {(["all", "bonding", "graduated"] as const).map((value) => (
+                <button aria-pressed={stage === value} key={value} onClick={() => setStage(value)} type="button">
+                  {value === "all" ? "All" : value === "bonding" ? "Bonding" : "Graduated"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <span className="control-label">Columns</span>
+            <div className="compact-segments" role="group" aria-label="Choose coin table columns">
+              {(["market", "flow", "research"] as const).map((value) => (
+                <button aria-pressed={group === value} key={value} onClick={() => setGroup(value)} type="button">
+                  {value === "market" ? "Market" : value === "flow" ? "Flow" : "Research"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {lookupState === "success" && enrichment ? (
-          <CurrentLookupResult enrichment={enrichment} onOpen={onOpenCurrent} />
+        <div aria-live="polite" className="feed-message">
+          {feedState === "loading" && !feed ? <p>Scanning configured discovery sources and enriching returned mints.</p> : null}
+          {feedError ? <p className="error-copy">Live discovery failed: {feedError}</p> : null}
+          {feedState !== "loading" && !feedError && visibleCoins.length === 0 ? (
+            <p>No real coins match this filter. This is an empty source response, not a synthetic replacement.</p>
+          ) : null}
+        </div>
+
+        {visibleCoins.length > 0 ? <CoinFeedTable asOfMs={feedAsOfMs} coins={visibleCoins} group={group} onOpen={onOpenCoin} /> : null}
+        {feed?.pagination.hasMore ? (
+          <div className="feed-pagination">
+            <span>Showing {feed.coins.length} observed coins</span>
+            <button className="button-secondary" disabled={feedState === "loading"} onClick={onLoadMore} type="button">
+              {feedState === "loading" ? "Loading…" : "Load older observations"}
+            </button>
+          </div>
         ) : null}
       </section>
 
       <section className="coverage-strip" aria-labelledby="coverage-title">
         <div>
-          <span className="kicker">App coverage</span>
-          <h2 id="coverage-title">What works today</h2>
+          <span className="kicker">Feed evidence</span>
+          <h2 id="coverage-title">What this response actually covers</h2>
         </div>
         <dl>
           <div>
-            <dt>Current lookup</dt>
-            <dd>{registryLoading ? "Checking sources" : `${lookupCoverage.connected} of ${lookupCoverage.total} lookup providers online`}</dd>
+            <dt>Canonical launches</dt>
+            <dd>{canonicalCount} of {feed?.coins.length ?? 0}</dd>
           </div>
           <div>
-            <dt>Historical launches</dt>
-            <dd>Not ingested</dd>
+            <dt>Sources attempted</dt>
+            <dd>{feed?.ingestion.discoverySources.join(", ") || "Unavailable"}</dd>
           </div>
           <div>
-            <dt>Validated forecasts</dt>
-            <dd>Not available</dd>
+            <dt>Storage</dt>
+            <dd>{feed?.ingestion.storage.state ?? "Unavailable"}</dd>
+          </div>
+          <div>
+            <dt>Lookup providers</dt>
+            <dd>{registryLoading ? "Checking" : `${lookupCoverage.connected} of ${lookupCoverage.total} online`}</dd>
           </div>
         </dl>
+        {feed?.ingestion.warnings.length ? (
+          <details className="compact-disclosure feed-warnings">
+            <summary>Coverage warnings ({feed.ingestion.warnings.length})</summary>
+            <ul>{feed.ingestion.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+          </details>
+        ) : null}
       </section>
 
-      <section className="demo-entry" aria-labelledby="demo-title">
-        <div className="demo-monogram" aria-hidden="true">AF</div>
-        <div>
-          <span className="truth-label truth-demo">Demo data</span>
-          <h2 id="demo-title">{replay.identity.name} <small>${replay.identity.ticker}</small></h2>
-          <p>A synthetic launch for learning how the report works. It is not a real token or a backtest result.</p>
+      <section className="search-surface exact-lookup" aria-labelledby="mint-search-title">
+        <div className="section-title-row">
+          <div><span className="kicker">Exact lookup</span><h2 id="mint-search-title">Open a mint not shown above</h2></div>
+          <p>Use the exact address; tickers are reused.</p>
         </div>
-        <button className="button-secondary" type="button" onClick={onOpenDemo}>Open demo</button>
+        <form onSubmit={onSubmit}>
+          <label htmlFor="mint-search">Solana contract address</label>
+          <div className="search-control">
+            <input id="mint-search" name="mint" onChange={(event) => onMintChange(event.target.value)} placeholder="Paste a base58 mint address" spellCheck={false} value={mint} />
+            <button className="button-primary" disabled={lookupState === "loading"} type="submit">{lookupState === "loading" ? "Checking…" : "Find coin"}</button>
+          </div>
+        </form>
+        <div aria-live="polite" className="lookup-status">
+          {lookupState === "loading" ? <p>Checking current providers.</p> : null}
+          {lookupState === "error" ? <p className="error-copy">{lookupError}</p> : null}
+        </div>
+        {lookupState === "success" && enrichment ? <CurrentLookupResult enrichment={enrichment} onOpen={onOpenCurrent} /> : null}
       </section>
     </>
-  );
-}
-
-function AssessmentRow({
-  label,
-  kind,
-  assessment,
-  meaning,
-}: {
-  label: string;
-  kind: "opportunity" | "integrity" | "tradability" | "evidence";
-  assessment: IllustrativeAssessment;
-  meaning: string;
-}) {
-  return (
-    <article className={`assessment-row assessment-${kind}`}>
-      <div className="assessment-copy">
-        <span>{label}</span>
-        <strong>{assessmentRead(kind, assessment)}</strong>
-        <p>{meaning}</p>
-      </div>
-      <details>
-        <summary>How this was calculated</summary>
-        <p className="formula-status">
-          Unvalidated rule score: {formatNumber(assessment.score0To100, 1)} of 100. This is not a probability.
-        </p>
-        <ul className="component-list">
-          {assessment.components.map((component) => (
-            <li key={component.key}>
-              <div><strong>{component.label}</strong><span>{component.explanation}</span></div>
-              <code>{formatNumber(component.normalized0To100, 0)} / 100</code>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </article>
   );
 }
 
@@ -544,30 +701,43 @@ function EvidenceDisclosure({
   );
 }
 
-function DemoReport({
-  replay,
-  summary,
+function DiscoveredCoinReport({
+  coin,
+  research,
+  researchLoading,
+  error,
   cutoff,
+  referenceClock,
   onCutoff,
+  onReferenceClock,
   onBack,
 }: {
-  replay: ResearchReplay;
-  summary: ResearchSummary;
+  coin: CoinListItem | null;
+  research: CoinResearchResponse | null;
+  researchLoading: boolean;
+  error: string | null;
   cutoff: CutoffLabel;
+  referenceClock: ReferenceClock;
   onCutoff: (cutoff: CutoffLabel) => void;
+  onReferenceClock: (clock: ReferenceClock) => void;
   onBack: () => void;
 }) {
-  const snapshot = summary.selectedCutoff;
-  const outputs = snapshot.outputs;
-  const probe = snapshot.liquidityExecution.probes.find((item) => item.notionalUsd === 500)
-    ?? snapshot.liquidityExecution.probes[0];
-  const cutoffWords: Record<CutoffLabel, string> = {
-    "30s": "30 seconds",
-    "1m": "1 minute",
-    "5m": "5 minutes",
-    "15m": "15 minutes",
-    "1h": "1 hour",
-  };
+  const features = research?.features;
+  const mappingCounts = research ? Object.entries(research.evidence.mapping.mappedCounts)
+    .filter(([, count]) => count > 0)
+    .sort((left, right) => right[1] - left[1]) : [];
+  const prediction = research?.prediction;
+  const predictedProbability = prediction?.status === "predicted"
+    ? prediction.probability * 100
+    : null;
+  const executionProbe = features?.liquidityExecution.probes.find((probe) => probe.orderSizeUsd === 100)
+    ?? features?.liquidityExecution.probes[0];
+  const coordination = features?.coordinationWash.coordinationEvidence0To100 ?? null;
+  const outcomeReason = !research
+    ? "No cutoff-aligned executable outcome has been loaded."
+    : "reason" in research.outcome
+      ? research.outcome.reason
+      : research.outcome.caveats[0] ?? "The outcome record has no additional note.";
 
   return (
     <>
@@ -575,284 +745,151 @@ function DemoReport({
         <ScreenHeading
           section="Coin report"
           title="Understand this coin"
-          description={`Evidence available ${cutoffWords[cutoff]} after launch. The demo asks whether early evidence was associated with later executable upside over the next 24 hours.`}
+          description="Replay what the system actually observed by each cutoff. Uncollected evidence stays unavailable instead of being estimated from the future."
         />
         <button className="text-button" type="button" onClick={onBack}>Back to coins</button>
       </div>
 
-      <section className="identity-bar" aria-label="Selected demo token">
-        <div className="demo-monogram" aria-hidden="true">AF</div>
-        <div className="identity-main">
-          <span className="truth-label truth-demo">Synthetic demo</span>
-          <strong>{replay.identity.name} <small>${replay.identity.ticker}</small></strong>
-          <code>{shortAddress(replay.identity.contractAddress)}</code>
-        </div>
-        <div className="identity-time">
-          <span>Evidence known by</span>
-          <strong>{formatTime(snapshot.asOf)}</strong>
-        </div>
-      </section>
+      {researchLoading ? <section className="report-loading" aria-live="polite"><h2>Replaying real observations</h2><p>Applying the selected clock and cutoff without using later evidence.</p></section> : null}
+      {error ? <section className="report-error" role="alert"><h2>This report could not be loaded</h2><p>{error}</p></section> : null}
 
-      <div className="truth-notice" role="note">
-        <strong>Synthetic demo, not a real token.</strong>
-        <span>Every number below is invented to test the research method. It is an unvalidated heuristic, not a probability and not a trade recommendation.</span>
-      </div>
+      {coin ? (
+        <>
+          <section className="identity-bar" aria-label="Selected real token">
+            <div className="token-monogram" aria-hidden="true">{coinDisplaySymbol(coin).slice(0, 2).toUpperCase()}</div>
+            <div className="identity-main">
+              <span className={`truth-label ${coin.canonicalConfirmed ? "truth-live" : "truth-unconfirmed"}`}>
+                {coin.canonicalConfirmed ? "Canonical launch confirmed" : "Indexed discovery, canonical launch unconfirmed"}
+              </span>
+              <strong>{coinDisplayName(coin)} <small>${coinDisplaySymbol(coin)}</small></strong>
+              <code title={coin.mint}>{coin.mint}</code>
+            </div>
+            <div className="identity-time">
+              <span>{coin.createdAt ? "Launched" : "Discovery time unavailable"}</span>
+              <strong>{coin.createdAt ? formatTime(coin.createdAt) : "Unavailable"}</strong>
+            </div>
+          </section>
 
-      <section className="cutoff-section" aria-labelledby="cutoff-title">
-        <div>
-          <span className="kicker">Point in time</span>
-          <h2 id="cutoff-title">Choose what the report was allowed to know</h2>
-        </div>
-        <div className="cutoff-control" role="group" aria-label="Evidence cutoff after launch">
-          {RESEARCH_CUTOFFS.map((item) => (
-            <button
-              aria-pressed={cutoff === item.label}
-              className={cutoff === item.label ? "active" : ""}
-              key={item.label}
-              onClick={() => onCutoff(item.label)}
-              type="button"
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="interpretation" aria-labelledby="interpretation-title">
-        <span className="kicker">Short interpretation</span>
-        <h2 id="interpretation-title">Early demand is visible, but it is not enough to justify a trade.</h2>
-        <p>
-          Buyer growth and narrative activity support further investigation. Shared-funder clues,
-          creator selling, and reconstructed exit data keep the conclusion uncertain.
-        </p>
-        <dl className="decision-facts">
-          <div><dt>Net flow</dt><dd>{formatUsd(snapshot.lifecycleFlow.netFlowUsd)}</dd></div>
-          <div><dt>New buyers</dt><dd>{formatNumber(snapshot.lifecycleFlow.uniqueBuyersPerMinute, 1)} / min</dd></div>
-          <div><dt>Common funder clues</dt><dd>{formatPct(snapshot.coordinationWash.commonFunderEvidencePct)}</dd></div>
-          <div><dt>{formatUsd(probe?.notionalUsd)} simulated exit</dt><dd>{probe ? `${formatPct(probe.retentionPct)} retained` : "Unavailable"}</dd></div>
-        </dl>
-      </section>
-
-      <section className="assessment-rail" aria-label="Four independent research assessments">
-        <AssessmentRow
-          assessment={outputs.opportunity}
-          kind="opportunity"
-          label="Opportunity"
-          meaning="Evidence associated with later upside in this synthetic replay."
-        />
-        <AssessmentRow
-          assessment={outputs.integrityRisk}
-          kind="integrity"
-          label="Integrity risk"
-          meaning="Coordination and manufactured-activity clues. These do not prove identity or intent."
-        />
-        <AssessmentRow
-          assessment={outputs.executability}
-          kind="tradability"
-          label="Tradability"
-          meaning="Whether the stated order sizes could plausibly enter and exit after costs."
-        />
-        <AssessmentRow
-          assessment={outputs.evidenceConfidence}
-          kind="evidence"
-          label="Evidence quality"
-          meaning="Coverage, timing, provenance, reconstruction, and missing information."
-        />
-      </section>
-
-      <section className="evidence-list" aria-labelledby="evidence-title">
-        <div className="section-title-row">
-          <div><span className="kicker">Evidence</span><h2 id="evidence-title">Open only what you need</h2></div>
-          <p>Every section uses information available by the selected cutoff.</p>
-        </div>
-
-        <EvidenceDisclosure
-          defaultOpen
-          title="Demand and ownership"
-          summary={`${formatUsd(snapshot.lifecycleFlow.netFlowUsd)} net flow · ${formatPct(snapshot.ownershipCreator.topTenOwnerWalletSharePct)} held by top 10 owner wallets`}
-        >
-          <dl className="evidence-grid">
-            <div><dt>Curve velocity</dt><dd>{formatNumber(snapshot.lifecycleFlow.curveVelocityPctPointsPerMinute, 2)} points / min</dd></div>
-            <div><dt>Buy/sell imbalance</dt><dd>{formatNumber(snapshot.lifecycleFlow.buySellImbalance, 2)}</dd></div>
-            <div><dt>Largest owner</dt><dd>{formatPct(snapshot.ownershipCreator.topOwnerWalletSharePct)}</dd></div>
-            <div><dt>Effective owners</dt><dd>{formatNumber(snapshot.ownershipCreator.ownerWalletEffectiveCount, 1)}</dd></div>
-            <div><dt>Creator net sold</dt><dd>{formatUsd(snapshot.ownershipCreator.creatorNetSoldUsd)}</dd></div>
-            <div><dt>Metadata mutable</dt><dd>{snapshot.ownershipCreator.authorities.metadataMutable ? "Yes" : "No"}</dd></div>
-          </dl>
-        </EvidenceDisclosure>
-
-        <EvidenceDisclosure
-          title="Wallet coordination"
-          summary={`${formatPct(snapshot.coordinationWash.commonFunderEvidencePct)} common-funder clues · ${formatPct(snapshot.coordinationWash.sameSlotEarlyBuyerPct)} same-slot buyers`}
-        >
-          <p>
-            Shared funders, repeated cohorts, same-slot ordering, circular transfers, and synchronized exits
-            raise suspicion together. Exchanges and popular trading bots can create false links.
-          </p>
-          <dl className="evidence-grid">
-            <div><dt>Recurring cohort</dt><dd>{formatPct(snapshot.coordinationWash.recurringCohortEvidencePct)}</dd></div>
-            <div><dt>Synchronized exits</dt><dd>{formatPct(snapshot.coordinationWash.synchronizedExitPct)}</dd></div>
-            <div><dt>Coordination rule score</dt><dd>{formatNumber(snapshot.coordinationWash.coordinationEvidenceScore.score0To100, 1)} / 100</dd></div>
-            <div><dt>Wash rule score</dt><dd>{formatNumber(snapshot.coordinationWash.washEvidenceScore.score0To100, 1)} / 100</dd></div>
-          </dl>
-          <p className="fine-print">These are clues, not proof of a cabal, common ownership, wrongdoing, or intent.</p>
-        </EvidenceDisclosure>
-
-        <EvidenceDisclosure
-          title="Narrative and attention"
-          summary={`${formatNumber(snapshot.narrativePaidAttention.postsPerMinute, 1)} posts / min · ${formatPct(snapshot.narrativePaidAttention.uniqueAuthorRatioPct)} unique-author ratio`}
-        >
-          <dl className="evidence-grid">
-            <div><dt>Post acceleration</dt><dd>{formatNumber(snapshot.narrativePaidAttention.postVelocityChangePerMinute, 2)} / min²</dd></div>
-            <div><dt>Exact identity mentions</dt><dd>{formatPct(snapshot.narrativePaidAttention.exactIdentityMentionRatioPct)}</dd></div>
-            <div><dt>Likely automated posts</dt><dd>{formatPct(snapshot.narrativePaidAttention.likelyAutomatedPostRatioPct)}</dd></div>
-            <div><dt>Paid exposure</dt><dd>{formatUsd(snapshot.narrativePaidAttention.paidExposureUsd)}</dd></div>
-          </dl>
-          <ul className="narrative-list">
-            {snapshot.narrativePaidAttention.topNarratives.map((narrative) => (
-              <li key={narrative.id}><strong>{narrative.label}</strong><span>{formatNumber(narrative.postCount, 0)} posts · novelty {formatNumber(narrative.noveltyScore0To100, 0)} / 100</span></li>
-            ))}
-          </ul>
-        </EvidenceDisclosure>
-
-        <EvidenceDisclosure
-          title="Tradability"
-          summary={`${formatUsd(snapshot.liquidityExecution.quoteReserveUsd)} quote reserve · ${snapshot.liquidityExecution.probes.length} simulated exits`}
-        >
-          <div className="table-scroll" role="region" aria-label="Simulated exit results">
-            <table>
-              <caption>Reconstructed exit probes at the selected cutoff</caption>
-              <thead><tr><th>Order size</th><th>Value returned</th><th>Retained</th><th>Price impact</th><th>Route</th></tr></thead>
-              <tbody>
-                {snapshot.liquidityExecution.probes.map((item) => (
-                  <tr key={`${item.direction}-${item.notionalUsd}`}>
-                    <td>{formatUsd(item.notionalUsd)}</td>
-                    <td>{formatUsd(item.expectedValueUsd)}</td>
-                    <td>{formatPct(item.retentionPct)}</td>
-                    <td>{formatPct(item.priceImpactPct)}</td>
-                    <td>{item.routeAvailable ? "Available" : "Unavailable"}</td>
-                  </tr>
+          <section className="cutoff-section" aria-labelledby="real-cutoff-title">
+            <div>
+              <span className="kicker">Point in time</span>
+              <h2 id="real-cutoff-title">What was knowable at this moment?</h2>
+            </div>
+            <div className="point-controls">
+              <div className="clock-control" role="group" aria-label="Reference event">
+                <button aria-pressed={referenceClock === "launch"} onClick={() => onReferenceClock("launch")} type="button">After launch</button>
+                <button aria-pressed={referenceClock === "graduation"} onClick={() => onReferenceClock("graduation")} type="button">After graduation</button>
+              </div>
+              <div className="cutoff-control" role="group" aria-label={`Evidence cutoff after ${referenceClock}`}>
+                {RESEARCH_CUTOFFS.map((item) => (
+                  <button
+                    aria-pressed={cutoff === item.label}
+                    className={cutoff === item.label ? "active" : ""}
+                    key={item.label}
+                    onClick={() => onCutoff(item.label)}
+                    type="button"
+                  >
+                    {item.label}
+                  </button>
                 ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="fine-print">Historical router latency and private failed routes cannot be recreated exactly.</p>
-        </EvidenceDisclosure>
+              </div>
+            </div>
+          </section>
 
-        <EvidenceDisclosure
-          title="Evidence quality and limits"
-          summary={`${snapshot.sourceFidelity.exactCount} exact · ${snapshot.sourceFidelity.reconstructedCount} reconstructed · ${snapshot.sourceFidelity.proxyCount} proxy`}
-        >
-          <ul className="caveat-list">
-            {snapshot.caveats.map((caveat) => <li key={caveat}>{caveat}</li>)}
-          </ul>
-        </EvidenceDisclosure>
+          <section className="live-assessments" aria-label="Four independent research outputs">
+            <article>
+              <span>Pump probability</span>
+              <strong>{predictedProbability === null ? "Not trained" : formatPct(predictedProbability)}</strong>
+              <p>{prediction?.status === "predicted" ? "Calibrated estimate for the stated target and order size." : "No validated artifact has passed the training gate."}</p>
+            </article>
+            <article>
+              <span>Integrity evidence</span>
+              <strong>{coordination === null ? "Unavailable" : `${formatNumber(coordination, 0)} / 100`}</strong>
+              <p>Coordination clues, never proof of identity, intent, or wrongdoing.</p>
+            </article>
+            <article>
+              <span>Tradability</span>
+              <strong>{executionProbe?.roundTripRetentionPct === null || executionProbe?.roundTripRetentionPct === undefined ? "Unavailable" : formatPct(executionProbe.roundTripRetentionPct)}</strong>
+              <p>{executionProbe ? `${formatUsd(executionProbe.orderSizeUsd)} reconstructed round-trip retention.` : "No cutoff-aligned buy and sell quote pair."}</p>
+            </article>
+            <article>
+              <span>Evidence quality</span>
+              <strong>{research ? formatPct(research.evidence.overallCoveragePct, 0) : "Loading"}</strong>
+              <p>{research ? `${research.evidence.mapping.eligibleObservationCount} eligible of ${research.evidence.mapping.inputObservationCount} observed records.` : "Checking timestamp and source coverage."}</p>
+            </article>
+          </section>
 
-        <EvidenceDisclosure
-          title="Later outcome"
-          summary="Hindsight, excluded from every cutoff calculation"
-        >
-          <div className="hindsight-boundary" role="note">
-            <strong>Outcome label, not input evidence</strong>
-            <p>This information became available later and was not used to construct the assessments above.</p>
-          </div>
-          <dl className="evidence-grid">
-            <div><dt>Graduated</dt><dd>{summary.historicalOutcome.graduatedAtSeconds === null ? "No" : `After ${formatNumber(summary.historicalOutcome.graduatedAtSeconds, 0)} seconds`}</dd></div>
-            <div><dt>24h peak</dt><dd>{formatNumber(summary.historicalOutcome.peakPriceMultipleTwentyFourHours, 1)}× launch price</dd></div>
-            <div><dt>24h drawdown</dt><dd>{formatPct(summary.historicalOutcome.maximumDrawdownTwentyFourHoursPct)}</dd></div>
-            <div><dt>Survived 24h</dt><dd>{summary.historicalOutcome.survivedTwentyFourHours ? "Yes" : "No"}</dd></div>
-          </dl>
-        </EvidenceDisclosure>
-      </section>
-    </>
-  );
-}
+          <section className="interpretation" aria-labelledby="real-interpretation-title">
+            <span className="kicker">Answer at {cutoff} after {referenceClock}</span>
+            <h2 id="real-interpretation-title">
+              {predictedProbability === null
+                ? "No validated pump probability is available at this cutoff."
+                : `Estimated pump probability: ${formatPct(predictedProbability)}.`}
+            </h2>
+            <p>
+              {research?.status === "pending"
+                ? "This cutoff has not elapsed, so the report is waiting instead of using future evidence."
+                : research?.missingPrerequisites[0] ?? "The displayed inputs passed the point-in-time eligibility check."}
+            </p>
+            <dl className="decision-facts">
+              <div><dt>Price at cutoff</dt><dd>{formatUsd(features?.lifecycleFlow.priceUsd, 8)}</dd></div>
+              <div><dt>Buy / sell count</dt><dd>{features ? `${formatNumber(features.lifecycleFlow.buyCount, 0)} / ${formatNumber(features.lifecycleFlow.sellCount, 0)}` : "Unavailable"}</dd></div>
+              <div><dt>Unique buyers</dt><dd>{formatNumber(features?.lifecycleFlow.uniqueBuyers, 0)}</dd></div>
+              <div><dt>Net USD flow</dt><dd>{formatUsd(features?.lifecycleFlow.netFlowUsd)}</dd></div>
+            </dl>
+          </section>
 
-function CurrentReport({
-  enrichment,
-  onBack,
-}: {
-  enrichment: TokenEnrichmentResponse;
-  onBack: () => void;
-}) {
-  const identity = currentIdentity(enrichment);
-  const pair = matchingDexPair(enrichment, true);
-  const returnedProviders = Object.values(enrichment.providers).filter(
-    (provider) => provider.data !== null,
-  ).length;
-
-  return (
-    <>
-      <div className="report-heading-row">
-        <ScreenHeading
-          section="Coin report"
-          title="Understand this coin"
-          description="This report contains only the current provider snapshot. Historical cutoffs and model-dependent judgments stay unavailable."
-        />
-        <button className="text-button" type="button" onClick={onBack}>Back to coins</button>
-      </div>
-
-      <section className="identity-bar" aria-label="Selected current token">
-        <div className="token-monogram" aria-hidden="true">{identity.symbol.slice(0, 2).toUpperCase()}</div>
-        <div className="identity-main">
-          <span className="truth-label truth-live">Live current lookup</span>
-          <strong>{identity.name} <small>{identity.symbol}</small></strong>
-          <code>{shortAddress(enrichment.mint)}</code>
-        </div>
-        <div className="identity-time">
-          <span>Checked at</span>
-          <strong>{formatTime(enrichment.generatedAt)}</strong>
-        </div>
-      </section>
-
-      <div className="truth-notice truth-notice-current" role="note">
-        <strong>Current evidence only.</strong>
-        <span>No historical observation, validated probability, wallet-coordination conclusion, or trade recommendation is inferred from this lookup.</span>
-      </div>
-
-      <section className="live-assessments" aria-label="Current research availability">
-        <article><span>Opportunity</span><strong>Unavailable</strong><p>No trained point-in-time model exists.</p></article>
-        <article><span>Integrity risk</span><strong>Unavailable</strong><p>No as-of wallet graph has been reconstructed.</p></article>
-        <article><span>Tradability</span><strong>{pair?.liquidityUsd ? "Partial" : "Unavailable"}</strong><p>Current liquidity is not a complete entry-and-exit simulation.</p></article>
-        <article><span>Evidence quality</span><strong>Partial</strong><p>{returnedProviders} of 6 lookup providers returned current evidence.</p></article>
-      </section>
-
-      <section className="evidence-list" aria-labelledby="current-evidence-title">
-        <div className="section-title-row">
-          <div><span className="kicker">Current evidence</span><h2 id="current-evidence-title">What the sources returned</h2></div>
-        </div>
-        <EvidenceDisclosure defaultOpen title="Market snapshot" summary="Price, liquidity, supply, and recent activity">
-          <dl className="evidence-grid">
-            <div><dt>Jupiter price</dt><dd>{formatUsd(enrichment.providers.jupiter.data?.usdPrice, 8)}</dd></div>
-            <div><dt>DEX price</dt><dd>{formatUsd(pair?.priceUsd, 8)}</dd></div>
-            <div><dt>Liquidity</dt><dd>{formatUsd(pair?.liquidityUsd)}</dd></div>
-            <div><dt>Market cap</dt><dd>{formatUsd(pair?.marketCapUsd)}</dd></div>
-            <div><dt>Supply</dt><dd>{formatNumber(enrichment.providers.solana.data?.uiAmount, 2)}</dd></div>
-            <div><dt>Active boosts</dt><dd>{formatNumber(pair?.activeBoosts, 0)}</dd></div>
-          </dl>
-        </EvidenceDisclosure>
-        <EvidenceDisclosure title="Provider results" summary={`${returnedProviders} current responses · metered providers ${enrichment.meteredProvidersEnabled ? "enabled" : "disabled"}`}>
-          <ul className="lookup-provider-list">
-            {Object.entries(enrichment.providers).map(([key, provider]) => (
-              <LookupProviderRow
-                key={key}
-                label={provider.providerId}
-                state={provider.status.state}
-                value={provider.status.message}
-              />
-            ))}
-          </ul>
-        </EvidenceDisclosure>
-        <EvidenceDisclosure title="What is missing" summary="Why this cannot become a forecast yet">
-          <ul className="caveat-list">
-            <li>No ingested launch history at point-in-time cutoffs.</li>
-            <li>No complete early-buyer, funder, transfer, or exit graph.</li>
-            <li>No historical narrative snapshot aligned to the launch.</li>
-            <li>No walk-forward model performance or calibrated probability.</li>
-            <li>No executable route history, failure tape, or prospective paper fill.</li>
-          </ul>
-        </EvidenceDisclosure>
-      </section>
+          <section className="evidence-list" aria-labelledby="real-evidence-title">
+            <div className="section-title-row">
+              <div><span className="kicker">Real evidence</span><h2 id="real-evidence-title">What has actually been collected</h2></div>
+              <p>{research?.decision.decisionAt ? `Decision time ${formatTime(research.decision.decisionAt)}` : "Reference time unavailable"}</p>
+            </div>
+            <EvidenceDisclosure defaultOpen title="Launch and market" summary={`${stageLabel(coin)} · ${formatUsd(coin.market.liquidityUsd)} liquidity`}>
+              <dl className="evidence-grid">
+                <div><dt>Created slot</dt><dd>{formatNumber(coin.createdSlot, 0)}</dd></div>
+                <div><dt>Creator</dt><dd>{coin.creator ? shortAddress(coin.creator) : "Unavailable"}</dd></div>
+                <div><dt>Creation signature</dt><dd>{coin.creationSignature ? shortAddress(coin.creationSignature) : "Unavailable"}</dd></div>
+                <div><dt>Venue</dt><dd>{coin.lifecycle.venue}</dd></div>
+                <div><dt>24h buys</dt><dd>{formatNumber(coin.market.buys24h, 0)}</dd></div>
+                <div><dt>24h sells</dt><dd>{formatNumber(coin.market.sells24h, 0)}</dd></div>
+              </dl>
+            </EvidenceDisclosure>
+            <EvidenceDisclosure title="Cutoff-safe observations" summary={`${research?.evidence.mapping.eligibleObservationCount ?? 0} eligible records · ${research?.evidence.historyCoverage.partial ? "partial range" : "reported range"}`}>
+              {mappingCounts.length ? (
+                <dl className="evidence-grid">
+                  {mappingCounts.map(([kind, count]) => <div key={kind}><dt>{kind}</dt><dd>{count}</dd></div>)}
+                </dl>
+              ) : <p>No retained observation matched a supported point-in-time feature schema at this cutoff.</p>}
+              <p className="fine-print">
+                Scanned {formatNumber(research?.evidence.historyCoverage.signaturesScanned, 0)} signatures and decoded {formatNumber(research?.evidence.historyCoverage.transactionsDecoded, 0)} transactions.
+              </p>
+            </EvidenceDisclosure>
+            <EvidenceDisclosure title="Provenance and coverage" summary={`${coin.provenance.length} source records · ${coin.missing.length} explicit gaps`}>
+              <ul className="caveat-list">
+                {coin.provenance.map((record, index) => (
+                  <li key={`${record.sourceId}-${record.role}-${index}`}><strong>{record.sourceId}</strong> · {record.role} · {record.fidelity}</li>
+                ))}
+                {coin.missing.map((item) => <li key={`${item.field}-${item.reason}`}><strong>{item.field}</strong>: {item.reason}</li>)}
+                {research?.missingPrerequisites.map((reason) => <li key={reason}>{reason}</li>)}
+                {research?.evidence.historyCoverage.missingReasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ul>
+            </EvidenceDisclosure>
+            <EvidenceDisclosure title="Later outcome" summary={research?.outcome.status === "available" ? "Matured label, never an input" : "Not yet available as a valid label"}>
+              <div className="hindsight-boundary" role="note">
+                <strong>Hindsight boundary</strong>
+                <p>{outcomeReason}</p>
+              </div>
+              {research?.outcome.status === "available" ? (
+                <dl className="evidence-grid">
+                  <div><dt>2× before −50%</dt><dd>{"value" in research.outcome && research.outcome.value === 1 ? "Yes" : "No"}</dd></div>
+                  <div><dt>Maximum net return</dt><dd>{formatPct(research.outcome.maximumNetReturnPct)}</dd></div>
+                  <div><dt>Maximum drawdown</dt><dd>{formatPct(research.outcome.maximumDrawdownPct)}</dd></div>
+                </dl>
+              ) : null}
+            </EvidenceDisclosure>
+          </section>
+        </>
+      ) : null}
     </>
   );
 }
@@ -881,6 +918,17 @@ function DataMethodsScreen({
 }) {
   const [term, setTerm] = useState(initialTerm);
   const [category, setCategory] = useState<"All" | GlossaryCategory>("All");
+  const [modelAudit, setModelAudit] = useState<{
+    status: string;
+    acceptedExamples?: number;
+    reason?: string;
+    repository?: { featureSnapshotCount: number; outcomeCount: number; assetCount: number };
+  } | null>(null);
+  const [alertAudit, setAlertAudit] = useState<{
+    enabled: boolean;
+    configured: boolean;
+    probabilityThreshold: number;
+  } | null>(null);
   const normalizedTerm = term.trim().toLowerCase();
   const glossaryMatches = useMemo(() => {
     if (!normalizedTerm) return [];
@@ -893,6 +941,52 @@ function DataMethodsScreen({
   const connected = registry?.sources.filter((source) => source.status.state === "connected").length ?? 0;
   const automated = registry?.sources.filter((source) => source.automated).length ?? 0;
 
+  useEffect(() => {
+    let active = true;
+    async function loadAudits() {
+      await Promise.all([
+        (async () => {
+          try {
+            const response = await fetch("/api/model/research", { cache: "no-store" });
+            const body = await response.json() as {
+              status?: string;
+              acceptedExamples?: number;
+              reason?: string;
+              repository?: { featureSnapshotCount: number; outcomeCount: number; assetCount: number };
+            };
+            if (active) setModelAudit({
+              status: body.status ?? (response.ok ? "unknown" : "unavailable"),
+              acceptedExamples: body.acceptedExamples,
+              reason: body.reason,
+              repository: body.repository,
+            });
+          } catch {
+            if (active) setModelAudit({ status: "unavailable", reason: "The model audit endpoint did not respond." });
+          }
+        })(),
+        (async () => {
+          try {
+            const response = await fetch("/api/alerts", { cache: "no-store" });
+            const body = await response.json() as {
+              enabled?: boolean;
+              configured?: boolean;
+              probabilityThreshold?: number;
+            };
+            if (active && response.ok) setAlertAudit({
+              enabled: body.enabled === true,
+              configured: body.configured === true,
+              probabilityThreshold: body.probabilityThreshold ?? 0.8,
+            });
+          } catch {
+            if (active) setAlertAudit(null);
+          }
+        })(),
+      ]);
+    }
+    void loadAudits();
+    return () => { active = false; };
+  }, []);
+
   return (
     <>
       <ScreenHeading
@@ -902,11 +996,13 @@ function DataMethodsScreen({
       />
 
       <section className="audit-summary" aria-labelledby="audit-summary-title">
-        <div><span className="kicker">Current status</span><h2 id="audit-summary-title">Connection is not collection</h2></div>
+        <div><span className="kicker">Current status</span><h2 id="audit-summary-title">Connected is not complete</h2></div>
         <dl>
           <div><dt>Automated sources online</dt><dd>{registryLoading ? "Checking" : `${connected} of ${automated}`}</dd></div>
-          <div><dt>Historical cohort</dt><dd>Not ingested</dd></div>
-          <div><dt>Validated model</dt><dd>Not trained</dd></div>
+          <div><dt>Feature snapshots</dt><dd>{modelAudit?.repository ? formatNumber(modelAudit.repository.featureSnapshotCount, 0) : "Unavailable"}</dd></div>
+          <div><dt>Matured outcomes</dt><dd>{modelAudit?.repository ? formatNumber(modelAudit.repository.outcomeCount, 0) : "Unavailable"}</dd></div>
+          <div><dt>Historical model fit</dt><dd>{modelAudit?.status === "trained" ? "Ready to review" : "Not enough data"}</dd></div>
+          <div><dt>Telegram alerts</dt><dd>{alertAudit?.enabled && alertAudit.configured ? `On ≥ ${formatPct(alertAudit.probabilityThreshold * 100, 0)}` : "Off"}</dd></div>
           <div><dt>Automatic trading</dt><dd>Disabled</dd></div>
         </dl>
       </section>
@@ -1060,22 +1156,94 @@ function DataMethodsScreen({
 }
 
 export function ResearchConsole({
-  replay,
-  summaries,
   initialScreen = "coins",
   initialTerm = "",
 }: ResearchConsoleProps) {
   const [screen, setScreen] = useState<AppScreen>(initialScreen);
-  const [reportMode, setReportMode] = useState<ReportMode>("demo");
   const [cutoff, setCutoff] = useState<CutoffLabel>("5m");
   const [registry, setRegistry] = useState<SourceRegistryResponse | null>(null);
   const [registryLoading, setRegistryLoading] = useState(true);
   const [registryError, setRegistryError] = useState<string | null>(null);
+  const [feed, setFeed] = useState<CoinsListResponse | null>(null);
+  const [feedState, setFeedState] = useState<CoinFeedState>("loading");
+  const [feedError, setFeedError] = useState<string | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [selectedCoin, setSelectedCoin] = useState<CoinListItem | null>(null);
+  const [selectedMint, setSelectedMint] = useState<string | null>(null);
+  const [referenceClock, setReferenceClock] = useState<ReferenceClock>("launch");
+  const [coinResearch, setCoinResearch] = useState<CoinResearchResponse | null>(null);
+  const [coinResearchLoading, setCoinResearchLoading] = useState(false);
+  const [coinResearchError, setCoinResearchError] = useState<string | null>(null);
   const [mint, setMint] = useState("");
   const [lookupState, setLookupState] = useState<LookupState>("idle");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [enrichment, setEnrichment] = useState<TokenEnrichmentResponse | null>(null);
-  const summary = summaries[cutoff];
+  const researchRequestId = useRef(0);
+
+  const loadFeed = useCallback(async (cursor?: string | null, append = false) => {
+    setFeedState("loading");
+    try {
+      const params = new URLSearchParams({ limit: "50", source: "auto", enrich: "true" });
+      if (cursor) params.set("cursor", cursor);
+      const response = await fetch(`/api/coins?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const body = await response.json() as CoinsListResponse & { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message ?? body.error ?? "Coin discovery request failed.");
+      setFeed((current) => {
+        if (!append || !current) return body;
+        const byMint = new Map(current.coins.map((coin) => [coin.mint, coin]));
+        body.coins.forEach((coin) => byMint.set(coin.mint, coin));
+        return {
+          ...body,
+          coins: [...byMint.values()],
+          ingestion: {
+            ...body.ingestion,
+            warnings: [...new Set([...current.ingestion.warnings, ...body.ingestion.warnings])],
+          },
+        };
+      });
+      setFeedError(null);
+      setFeedState("ready");
+    } catch (error) {
+      setFeedError(error instanceof Error ? error.message : "Coin discovery request failed.");
+      setFeedState("error");
+    }
+  }, []);
+
+  const loadCoinResearch = useCallback(async (
+    requestedMint: string,
+    requestedClock: ReferenceClock,
+    requestedCutoff: CutoffLabel,
+  ) => {
+    const requestId = researchRequestId.current + 1;
+    researchRequestId.current = requestId;
+    setCoinResearchLoading(true);
+    setCoinResearchError(null);
+    setCoinResearch(null);
+    try {
+      const params = new URLSearchParams({
+        referenceClock: requestedClock,
+        cutoffSeconds: String(CUTOFF_SECONDS[requestedCutoff]),
+        orderSizeUsd: "100",
+        horizonSeconds: "86400",
+      });
+      const response = await fetch(`/api/coins/${encodeURIComponent(requestedMint)}/research?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const body = await response.json() as CoinResearchResponse & { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message ?? body.error ?? "Coin report request failed.");
+      if (researchRequestId.current !== requestId) return;
+      setCoinResearch(body);
+      setSelectedCoin(body.coin);
+    } catch (error) {
+      if (researchRequestId.current !== requestId) return;
+      setCoinResearch(null);
+      setCoinResearchError(error instanceof Error ? error.message : "Coin report request failed.");
+    } finally {
+      if (researchRequestId.current === requestId) setCoinResearchLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -1099,8 +1267,42 @@ export function ResearchConsole({
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => { void loadFeed(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadFeed]);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const timer = window.setInterval(() => { void loadFeed(); }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [autoRefresh, loadFeed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const requestedMint = new URLSearchParams(window.location.search).get("mint");
+    if (initialScreen === "report" && requestedMint) {
+      const timer = window.setTimeout(() => { setSelectedMint(requestedMint); }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [initialScreen]);
+
+  useEffect(() => {
+    if (!selectedMint) return;
+    const timer = window.setTimeout(() => {
+      void loadCoinResearch(selectedMint, referenceClock, cutoff);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [cutoff, loadCoinResearch, referenceClock, selectedMint]);
+
+  useEffect(() => {
     function syncScreenFromHistory() {
-      setScreen(screenFromLocation());
+      const nextScreen = screenFromLocation();
+      setScreen(nextScreen);
+      const requestedMint = new URLSearchParams(window.location.search).get("mint");
+      if (nextScreen === "report" && requestedMint) {
+        setSelectedMint(requestedMint);
+      }
       window.scrollTo({ top: 0, behavior: "auto" });
     }
     window.addEventListener("popstate", syncScreenFromHistory);
@@ -1133,10 +1335,24 @@ export function ResearchConsole({
     }
   }
 
-  function openReport(mode: ReportMode) {
-    setReportMode(mode);
+  function openLookupReport() {
+    const reportMint = enrichment?.mint ?? null;
+    if (reportMint) {
+      setSelectedMint(reportMint);
+      setSelectedCoin(null);
+      setCoinResearch(null);
+    }
     setScreen("report");
-    updateScreenUrl("report");
+    updateScreenUrl("report", reportMint);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function openCoin(coin: CoinListItem) {
+    setSelectedCoin(coin);
+    setSelectedMint(coin.mint);
+    setCoinResearch(null);
+    setScreen("report");
+    updateScreenUrl("report", coin.mint);
     window.scrollTo({ top: 0, behavior: "auto" });
   }
 
@@ -1180,31 +1396,48 @@ export function ResearchConsole({
       <main>
         {screen === "coins" ? (
           <CoinsScreen
+            autoRefresh={autoRefresh}
             enrichment={enrichment}
+            feed={feed}
+            feedError={feedError}
+            feedState={feedState}
             lookupError={lookupError}
             lookupState={lookupState}
             mint={mint}
             onMintChange={setMint}
-            onOpenCurrent={() => openReport("current")}
-            onOpenDemo={() => openReport("demo")}
+            onOpenCoin={openCoin}
+            onOpenCurrent={openLookupReport}
+            onLoadMore={() => { void loadFeed(feed?.pagination.nextCursor, true); }}
+            onRefresh={() => { void loadFeed(); }}
             onSubmit={submitMint}
+            onToggleAutoRefresh={() => setAutoRefresh((value) => !value)}
             registry={registry}
             registryLoading={registryLoading}
-            replay={replay}
           />
         ) : null}
 
         {screen === "report" ? (
-          reportMode === "current" && enrichment?.confirmation.confirmed ? (
-            <CurrentReport enrichment={enrichment} onBack={backToCoins} />
-          ) : (
-            <DemoReport
+          selectedMint || selectedCoin || coinResearchLoading || coinResearchError ? (
+            <DiscoveredCoinReport
+              coin={coinResearch?.coin ?? selectedCoin}
               cutoff={cutoff}
+              error={coinResearchError}
               onBack={backToCoins}
               onCutoff={setCutoff}
-              replay={replay}
-              summary={summary}
+              onReferenceClock={setReferenceClock}
+              referenceClock={referenceClock}
+              research={coinResearch}
+              researchLoading={coinResearchLoading}
             />
+          ) : (
+            <section className="report-empty">
+              <ScreenHeading
+                section="Coin report"
+                title="Choose a coin first"
+                description="Open a real row from Coins or paste an exact mint address. Reports never default to invented token data."
+              />
+              <button className="button-primary" onClick={backToCoins} type="button">Go to live coins</button>
+            </section>
           )
         ) : null}
 

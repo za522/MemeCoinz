@@ -17,7 +17,7 @@ These rules govern the `web/` repository. Preserve stricter instructions from th
 - Keep feature pillars inside progressive Coin report disclosures. Do not restore Research Lab, feature-tab, Data Coverage, or Live Shadow screen architecture.
 - Preserve the forensic daylight language, high legibility, restrained evidence colours, and minimal composition in `DESIGN.md`.
 - Keep opportunity, integrity risk, tradability, and evidence quality separate. Never replace them with one Buy Score.
-- Clearly distinguish synthetic demo data, live current lookups, historical observations, unavailable fields, and validated results.
+- Keep any synthetic fixture test/reference-only. Shipped screens and public research APIs must not substitute it for real, unavailable, or insufficient evidence.
 - Do not infer historical cutoffs or model scores from a current provider response.
 - Treat wallet coordination and wash-trading features as probabilistic evidence, not proof of identity, intent, or wrongdoing.
 - Keep automatic trading disabled unless a later request explicitly authorizes it after the documented evidence, safety, terms, and jurisdiction gates.
@@ -25,10 +25,13 @@ These rules govern the `web/` repository. Preserve stricter instructions from th
 ## Implementation
 
 - Preserve unrelated changes and do not modify duplicate untracked files unless the user names them.
-- Prefer existing React, semantic HTML, and CSS when they solve the task. Release 0.3.0 intentionally adopts no external UI package.
+- Prefer existing React, semantic HTML, and CSS when they solve the task. The current release intentionally adopts no external UI package.
 - Use familiar controls, visible focus, touch-safe targets, and Reduced Motion behavior.
 - Put explanations, formulas, provenance, and specialist definitions behind accessible disclosures or Data & methods.
 - Never expose provider secrets to the browser or through `NEXT_PUBLIC_` variables.
+- Never spend metered provider quota from a public GET, render, or implicit health check. Require an authenticated bounded mutation, explicit cost gate, and server credential.
+- Never serve a candidate/unvalidated model artifact as a prediction. Shadow alerts may use only the exact matching validated artifact and must never submit a trade.
+- Keep the manual research pipeline POST-only, admin-protected, bounded, and candidate-only. Do not turn it into a scheduler, candidate-promotion path, or transaction submitter without a separately reviewed product change.
 - Do not scrape Pump.fun consumer pages, Fomo.family, Photon, memescope.net, or private endpoints.
 - Add or update tests for changed behavior, edge cases, accessibility semantics, and truthful data states.
 - Do not make deployments, account connections, data purchases, trading actions, or other external writes unless the user's request authorizes them.

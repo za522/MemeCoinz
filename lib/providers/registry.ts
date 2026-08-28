@@ -82,7 +82,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     statusMethod: "configuration-check",
     interfaces: [
       "Implemented behind metered gate: JSON-RPC POST mainnet.helius-rpc.com method getAsset",
-      "Collector contract: getTransactionsForAddress",
+      "Implemented for authenticated bounded collection: JSON-RPC getTransactionsForAddress with time filters and pagination tokens",
     ],
     historicalCoverage: "vendor-archive",
     capabilities: [
@@ -97,7 +97,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       "Indexed or parsed data must retain its source slot and parser version.",
     ],
     commercialUseNote: "Use under the selected Helius plan and retention terms.",
-    implementationNote: "The DAS token adapter is implemented but untested without a project credential; historical collection is not running.",
+    implementationNote: "DAS and bounded historical transaction adapters are implemented and network-mocked in tests. Live credential verification still requires a project key; public GET routes never spend Helius credits.",
   },
   {
     id: "solana-tracker",
@@ -112,7 +112,8 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     interfaces: [
       "Implemented behind metered gate: GET data.solanatracker.io/tokens/{mint}",
       "Implemented adapter probe: GET data.solanatracker.io/price?token={mint}",
-      "Collector contract: GET data.solanatracker.io/tokens/latest",
+      "Implemented for authenticated bounded collection: token trades, paginated holders, holder chart, bundlers, risk, and deployer history endpoints",
+      "Implemented for launch discovery: GET data.solanatracker.io/tokens/latest",
     ],
     historicalCoverage: "mixed",
     capabilities: [
@@ -129,7 +130,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       "Vendor risk labels are evidence inputs, not ground-truth fraud labels.",
     ],
     commercialUseNote: "Review the Data API plan, retention, and redistribution terms.",
-    implementationNote: "The token adapter is implemented but untested without a project credential; launch discovery is not running.",
+    implementationNote: "Discovery and research collectors are implemented and network-mocked in tests. Live credential verification still requires a Data API key; mutable classifications retain retrieval-time availability.",
   },
   {
     id: "x-api",
@@ -143,7 +144,8 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     statusMethod: "configuration-check",
     interfaces: [
       "Implemented behind metered gate: GET api.x.com/2/tweets/counts/recent",
-      "Collector contract: /2/tweets/counts/all, /2/tweets/search/all, /2/tweets/search/stream",
+      "Implemented for authenticated bounded collection: recent/full-archive Post search and counts with start/end and pagination",
+      "Future collector contract: /2/tweets/search/stream",
     ],
     historicalCoverage: "mixed",
     capabilities: ["recent-social-counts", "full-archive-social-counts", "filtered-social-stream"],
@@ -154,7 +156,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       "Current engagement must not be backfilled as historical engagement.",
     ],
     commercialUseNote: "An approved X developer plan and compliance with X data-use rules are required.",
-    implementationNote: "Recent exact-contract counts are implemented but untested without a bearer token; archive and stream collectors are not running.",
+    implementationNote: "Recent/full-archive search and count adapters are implemented and network-mocked in tests. Live archive access depends on the X plan; filtered-stream collection is not implemented.",
   },
   {
     id: "jupiter",
@@ -168,7 +170,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     statusMethod: "live-health-check",
     interfaces: [
       "Implemented: GET api.jup.ag/price/v3?ids={mint}",
-      "Execution collector contract: GET api.jup.ag/swap/v2/order",
+      "Implemented read-only execution probes: GET lite-api.jup.ag/swap/v1/quote, or gated api.jup.ag/swap/v1/quote with a key",
     ],
     historicalCoverage: "live-only",
     capabilities: ["live-price", "execution-quote"],
@@ -178,7 +180,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       "A quote observed now cannot reconstruct a quote that was never archived.",
     ],
     commercialUseNote: "Use under the Jupiter Developer Platform terms and rate plan.",
-    implementationNote: "Price v3 is live; route quotes and execution probes are not yet called or stored.",
+    implementationNote: "Price v3 and size-specific USDC→token→USDC quote probes are implemented. Probes can be stored as current execution_quote observations; no swap transaction is built or submitted.",
   },
   {
     id: "pump-onchain",
@@ -193,17 +195,19 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     interfaces: [
       "Solana program 6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P (Pump bonding curve)",
       "Solana program pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA (PumpSwap AMM)",
-      "Decoder contract: Solana transactions/accounts with versioned official IDLs",
+      "Implemented exact discriminator decoder: Pump Create/CreateV2/Migrate and PumpSwap CreatePool",
+      "Protected bounded archive backfill: POST /api/coins/backfill",
     ],
     historicalCoverage: "canonical-archive",
     capabilities: ["launch-program-events", "canonical-transactions", "creator-history-inputs"],
     collects: ["coin creation", "bonding-curve trades and state", "graduation", "PumpSwap pools and swaps"],
     limitations: [
-      "Production collection must decode public program data; it must not call or scrape the Pump.fun consumer website.",
+      "Complete production coverage still requires an archive-capable RPC and a continuously scheduled collector.",
+      "The collector must not call or scrape the Pump.fun consumer website.",
       "Decoder and IDL versions must be stored with every derived record.",
     ],
     commercialUseNote: "On-chain facts come through the Solana provider; official SDK and IDL license terms still apply.",
-    implementationNote: "Official program sources are registered, but the instruction decoder and historical backfill worker are not running yet.",
+    implementationNote: "Exact official instruction decoding, bounded live discovery, continuation cursors, and protected archive backfill are implemented. No continuous scheduler or complete archive RPC is configured in this deployment.",
   },
   {
     id: "jito",
@@ -217,6 +221,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
     statusMethod: "live-health-check",
     interfaces: [
       "Implemented read-only probe: JSON-RPC POST mainnet.block-engine.jito.wtf/api/v1/getTipAccounts",
+      "Implemented read-only current context: GET bundles.jito.wtf/api/v1/bundles/tip_floor",
       "Evidence collector contract: getBundleStatuses and getInflightBundleStatuses when a bundle ID is already known",
     ],
     historicalCoverage: "live-only",
@@ -228,7 +233,7 @@ export const PROVIDER_DEFINITIONS: readonly ProviderDefinition[] = [
       "All submission and trading methods remain disabled.",
     ],
     commercialUseNote: "Read-only use is rate limited; review Jito terms before production collection.",
-    implementationNote: "Read-only endpoint health is live; known-bundle lookup and durable evidence capture are not running.",
+    implementationNote: "Current tip-account and tip-floor collection is implemented and network-mocked. Known-bundle lookup is not implemented, and complete historical bundle membership is not claimed.",
   },
   {
     id: "pump-fun-ui",
@@ -352,8 +357,8 @@ export async function getSourceRegistry(): Promise<SourceRegistryResponse> {
     ),
     "pump-onchain": configuredUnverifiedStatus(
       solana.ok
-        ? "Official program sources are reachable through Solana; decoder and backfill are not running."
-        : "Official program sources are registered; Solana reachability and decoder setup need attention.",
+        ? "Official Pump/PumpSwap decoding and bounded backfill are implemented; the Solana endpoint is reachable, but no continuous collector is claimed."
+        : "The decoder and bounded backfill are implemented; the configured Solana endpoint is currently unreachable.",
     ),
     jito: resultToStatus(
       jito,

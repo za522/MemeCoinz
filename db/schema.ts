@@ -29,6 +29,16 @@ export const assets = sqliteTable(
     createdSlot: integer("created_slot"),
     programVersion: text("program_version"),
     metadataObjectKey: text("metadata_object_key"),
+    metadataUri: text("metadata_uri"),
+    imageUri: text("image_uri"),
+    creationSignature: text("creation_signature"),
+    lifecycleStage: text("lifecycle_stage").notNull().default("unknown"),
+    graduatedAt: text("graduated_at"),
+    poolAddress: text("pool_address"),
+    canonicalConfirmed: integer("canonical_confirmed", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    updatedAt: text("updated_at").notNull().default(""),
   },
   (table) => [
     uniqueIndex("idx_assets_chain_mint").on(table.chainId, table.mintAddress),
@@ -50,6 +60,8 @@ export const observations = sqliteTable(
     retrievedAt: text("retrieved_at").notNull(),
     slot: integer("slot"),
     transactionIndex: integer("transaction_index"),
+    instructionIndex: integer("instruction_index"),
+    signature: text("signature"),
     commitment: text("commitment"),
     canonicalStatus: text("canonical_status").notNull(),
     fidelity: text("fidelity").notNull(),
@@ -92,6 +104,10 @@ export const outcomes = sqliteTable(
   {
     id: text("id").primaryKey(),
     assetId: text("asset_id").notNull().references(() => assets.id),
+    featureSnapshotId: text("feature_snapshot_id").references(() => featureSnapshots.id),
+    referenceClock: text("reference_clock"),
+    cutoffSeconds: integer("cutoff_seconds"),
+    decisionAt: text("decision_at"),
     labelName: text("label_name").notNull(),
     labelVersion: text("label_version").notNull(),
     horizonSeconds: integer("horizon_seconds").notNull(),
@@ -102,12 +118,17 @@ export const outcomes = sqliteTable(
     evidenceJson: text("evidence_json").notNull(),
   },
   (table) => [
-    uniqueIndex("idx_outcomes_asset_label_version_horizon_size").on(
-      table.assetId,
+    uniqueIndex("idx_outcomes_snapshot_label_version_horizon_size").on(
+      table.featureSnapshotId,
       table.labelName,
       table.labelVersion,
       table.horizonSeconds,
       table.orderSizeUsd,
+    ),
+    index("idx_outcomes_asset_clock_cutoff").on(
+      table.assetId,
+      table.referenceClock,
+      table.cutoffSeconds,
     ),
     index("idx_outcomes_label_available").on(table.labelName, table.labelAvailableAt),
   ],
@@ -173,4 +194,60 @@ export const experiments = sqliteTable(
     createdAt: text("created_at").notNull(),
   },
   (table) => [index("idx_experiments_created_at").on(table.createdAt)],
+);
+
+export const modelArtifacts = sqliteTable(
+  "model_artifacts",
+  {
+    id: text("id").primaryKey(),
+    modelVersion: text("model_version").notNull(),
+    status: text("status").notNull(),
+    targetName: text("target_name").notNull(),
+    targetVersion: text("target_version").notNull(),
+    horizonSeconds: integer("horizon_seconds").notNull(),
+    orderSizeUsd: real("order_size_usd").notNull(),
+    featureSetVersion: text("feature_set_version").notNull(),
+    trainingThrough: text("training_through").notNull(),
+    datasetFingerprint: text("dataset_fingerprint").notNull(),
+    artifactJson: text("artifact_json").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_model_artifacts_version").on(table.modelVersion),
+    index("idx_model_artifacts_target_feature_status_created").on(
+      table.targetName,
+      table.targetVersion,
+      table.horizonSeconds,
+      table.orderSizeUsd,
+      table.featureSetVersion,
+      table.status,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const alertDeliveries = sqliteTable(
+  "alert_deliveries",
+  {
+    id: text("id").primaryKey(),
+    predictionId: text("prediction_id")
+      .notNull()
+      .references(() => predictions.id),
+    channel: text("channel").notNull(),
+    status: text("status").notNull(),
+    attemptedAt: text("attempted_at").notNull(),
+    deliveredAt: text("delivered_at"),
+    providerMessageId: text("provider_message_id"),
+    failureReason: text("failure_reason"),
+  },
+  (table) => [
+    uniqueIndex("idx_alert_deliveries_prediction_channel").on(
+      table.predictionId,
+      table.channel,
+    ),
+    index("idx_alert_deliveries_status_attempted").on(
+      table.status,
+      table.attemptedAt,
+    ),
+  ],
 );

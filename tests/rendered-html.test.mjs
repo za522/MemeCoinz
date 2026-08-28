@@ -33,20 +33,28 @@ const HISTORICAL_COVERAGE = new Set([
   "none",
 ]);
 
+const STORAGE_STATES = new Set([
+  "written",
+  "read-only",
+  "unavailable",
+  "failed",
+]);
+
 let renderSequence = 0;
 
-async function render(pathname = "/") {
+async function render(pathname = "/", init = undefined) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set(
     "test",
     `${process.pid}-${Date.now()}-${renderSequence += 1}`,
   );
   const { default: worker } = await import(workerUrl.href);
+  const accept = pathname.startsWith("/api/") ? "application/json" : "text/html";
+  const headers = new Headers(init?.headers);
+  if (!headers.has("accept")) headers.set("accept", accept);
 
   return worker.fetch(
-    new Request(`http://localhost${pathname}`, {
-      headers: { accept: pathname.startsWith("/api/") ? "application/json" : "text/html" },
-    }),
+    new Request(`http://localhost${pathname}`, { ...init, headers }),
     {
       ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) },
     },
@@ -55,7 +63,9 @@ async function render(pathname = "/") {
 }
 
 function visibleHtml(html) {
-  return html.replace(/<!--[\s\S]*?-->/g, "");
+  return html
+    .replace(/<!--[^]*?-->/g, "")
+    .replace(/<script\b[^>]*>[^]*?<\/script>/gi, "");
 }
 
 function countMatches(value, pattern) {
@@ -64,7 +74,7 @@ function countMatches(value, pattern) {
 
 function extractPrimaryNav(html) {
   const match = visibleHtml(html).match(
-    /<nav[^>]*aria-label="Primary navigation"[^>]*>([\s\S]*?)<\/nav>/i,
+    /<nav[^>]*aria-label="Primary navigation"[^>]*>([^]*?)<\/nav>/i,
   );
   assert.ok(match, "expected an explicitly labelled primary navigation region");
   return match[1];
@@ -73,7 +83,7 @@ function extractPrimaryNav(html) {
 function extractSectionByClass(html, className) {
   const match = visibleHtml(html).match(
     new RegExp(
-      `<(?:section|aside)[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/(?:section|aside)>`,
+      `<(?:section|aside)[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>([^]*?)<\\/(?:section|aside)>`,
       "i",
     ),
   );
@@ -108,6 +118,32 @@ function assertSemanticScreen(html, h1) {
   assert.doesNotMatch(visible, /codex-preview|react-loading-skeleton/i);
 }
 
+function assertCoinShape(coin) {
+  assert.equal(typeof coin.mint, "string");
+  assert.equal(typeof coin.canonicalConfirmed, "boolean");
+  assert.ok(coin.lifecycle && typeof coin.lifecycle === "object");
+  assert.ok(["pump", "pump-swap", "unknown"].includes(coin.lifecycle.venue));
+  assert.ok(["bonding", "graduated", "pool", "unknown"].includes(coin.lifecycle.stage));
+  assert.ok(coin.market && typeof coin.market === "object");
+  for (const key of [
+    "priceUsd",
+    "marketCapUsd",
+    "liquidityUsd",
+    "volume24hUsd",
+    "buys24h",
+    "sells24h",
+    "priceChange24hPct",
+    "pairAddress",
+    "dexId",
+    "pairCreatedAt",
+    "observedAt",
+  ]) {
+    assert.ok(key in coin.market, `expected coin.market.${key}`);
+  }
+  assert.ok(Array.isArray(coin.provenance));
+  assert.ok(Array.isArray(coin.missing));
+}
+
 test("server-renders exactly three primary destinations", async () => {
   const response = await render("/?screen=coins");
   assert.equal(response.status, 200);
@@ -116,59 +152,52 @@ test("server-renders exactly three primary destinations", async () => {
   const html = await response.text();
   assert.match(html, /<title>MemeTrace · [^<]+<\/title>/i);
   assertPrimaryNav(html, "Coins");
-  assertSemanticScreen(html, "Find a coin");
+  assertSemanticScreen(html, "Explore live coins");
 });
 
-test("Coins separates app coverage from the synthetic demo", async () => {
+test("Coins defaults to an honest real-feed loading state, not demo data", async () => {
   const response = await render("/?screen=coins");
   assert.equal(response.status, 200);
   const html = await response.text();
+  const visible = visibleHtml(html);
+
+  const feedStatus = extractSectionByClass(html, "feed-status");
+  assert.match(feedStatus, /Live discovery/i);
+  assert.match(feedStatus, /Loading real coins/i);
+  assert.match(feedStatus, /Auto-refresh on/i);
+  assert.match(feedStatus, /Refreshing/i);
+
+  const feed = extractSectionByClass(html, "coin-feed");
+  assert.match(feed, /Filter returned coins/i);
+  assert.match(feed, /Name, ticker, or exact mint/i);
+  assert.match(feed, /Scanning configured discovery sources/i);
 
   const coverage = extractSectionByClass(html, "coverage-strip");
-  assert.match(coverage, /App coverage/i);
-  assert.match(coverage, /Historical launches/i);
-  assert.match(coverage, /Not ingested/i);
-  assert.doesNotMatch(coverage, /September|October/i);
+  assert.match(coverage, /What this response actually covers/i);
+  assert.match(coverage, /Canonical launches/i);
+  assert.match(coverage, /Sources attempted/i);
+  assert.match(coverage, /Storage/i);
 
-  const demo = extractSectionByClass(html, "demo-entry");
-  assert.match(demo, /Demo data/i);
-  assert.match(demo, /not a real token or a backtest result/i);
-  assert.match(demo, /Open demo/i);
-  assert.match(html, /<label[^>]*for="mint-search"[^>]*>Solana contract address<\/label>/i);
-  assert.match(html, /<input[^>]*id="mint-search"[^>]*name="mint"/i);
+  assert.match(visible, /Open a mint not shown above/i);
+  assert.match(visible, /<label[^>]*for="mint-search"[^>]*>Solana contract address<\/label>/i);
+  assert.doesNotMatch(visible, /Open demo|Synthetic demo, not a real token|unvalidated rule score/i);
 });
 
-test("Coin report labels the synthetic heuristic and keeps four separate assessments", async () => {
+test("Coin report requires a real selection and never defaults to an invented token", async () => {
   const response = await render("/?screen=report");
   assert.equal(response.status, 200);
   const html = await response.text();
   const visible = visibleHtml(html);
 
   assertPrimaryNav(html, "Coin report");
-  assertSemanticScreen(html, "Understand this coin");
-  assert.match(visible, /Evidence available 5 minutes after launch/i);
-  assert.match(
-    visible,
-    /<div[^>]*class="truth-notice"[^>]*role="note"[^>]*>[\s\S]*?Synthetic demo, not a real token\.[\s\S]*?unvalidated heuristic, not a probability and not a trade recommendation\.[\s\S]*?<\/div>/i,
-  );
-
-  const assessments = extractSectionByClass(html, "assessment-rail");
-  for (const label of ["Opportunity", "Integrity risk", "Tradability", "Evidence quality"]) {
-    assert.match(assessments, new RegExp(`>${label}<`, "i"));
-  }
-  assert.equal(countMatches(assessments, /<details\b/gi), 4);
-  assert.equal(countMatches(assessments, /<summary>How this was calculated<\/summary>/gi), 4);
-  assert.doesNotMatch(visible, /Buy now|Trade now|Auto-buy|Send trade/i);
-
-  const cutoffGroup = visible.match(
-    /<div[^>]*role="group"[^>]*aria-label="Evidence cutoff after launch"[^>]*>([\s\S]*?)<\/div>/i,
-  );
-  assert.ok(cutoffGroup, "expected an accessible evidence-cutoff control");
-  assert.equal(countMatches(cutoffGroup[1], /<button\b/gi), 5);
-  assert.equal(countMatches(cutoffGroup[1], /aria-pressed="true"/gi), 1);
+  assertSemanticScreen(html, "Choose a coin first");
+  assert.match(visible, /Open a real row from Coins or paste an exact mint address/i);
+  assert.match(visible, /Reports never default to invented token data/i);
+  assert.match(visible, /Go to live coins/i);
+  assert.doesNotMatch(visible, /Synthetic demo|illustrative heuristic|Evidence available 5 minutes/i);
 });
 
-test("Data and methods distinguishes the external benchmark and keeps glossary search-first", async () => {
+test("Data and methods states the untrained research truth and keeps terminology search-first", async () => {
   const response = await render("/?screen=methods");
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -177,9 +206,15 @@ test("Data and methods distinguishes the external benchmark and keeps glossary s
   assertSemanticScreen(html, "Audit the research");
 
   const audit = extractSectionByClass(html, "audit-summary");
-  assert.match(audit, /Historical cohort/i);
-  assert.match(audit, /Not ingested/i);
-  assert.doesNotMatch(audit, /September|October/i);
+  assert.match(audit, /Connected is not complete/i);
+  assert.match(audit, /Feature snapshots/i);
+  assert.match(audit, /Matured outcomes/i);
+  assert.match(audit, /Historical model fit/i);
+  assert.match(audit, /Not enough data/i);
+  assert.match(audit, /Telegram alerts/i);
+  assert.match(audit, /Off/i);
+  assert.match(audit, /Automatic trading/i);
+  assert.match(audit, /Disabled/i);
 
   const benchmark = extractSectionByClass(html, "external-benchmark");
   assert.match(benchmark, /External research, not app coverage/i);
@@ -193,7 +228,7 @@ test("Data and methods distinguishes the external benchmark and keeps glossary s
   assert.doesNotMatch(glossary, /<dl\b/i);
 });
 
-test("server-renders a focused glossary result from the query", async () => {
+test("server-renders a focused terminology result from the query", async () => {
   const response = await render("/?screen=methods&term=HHI");
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -205,35 +240,189 @@ test("server-renders a focused glossary result from the query", async () => {
   assert.doesNotMatch(glossary, /<dt><strong>Slippage<\/strong>/i);
 });
 
-test("returns a leakage-safe research summary from the API", async () => {
-  const response = await render("/api/research?cutoff=1m");
+test("in-app terminology includes the real pipeline terms introduced in 0.4", async () => {
+  const response = await render("/?screen=methods&term=Execution%20path");
   assert.equal(response.status, 200);
-  assert.equal(response.headers.get("x-research-data"), "illustrative-fixture");
+  const glossary = extractSectionByClass(await response.text(), "glossary-section");
 
-  const summary = await response.json();
-  assert.equal(summary.selectedCutoff.cutoff.label, "1m");
-  assert.equal(summary.mode, "illustrative-historical-replay");
-  assert.match(summary.fixtureLabel, /illustrative replay/i);
-  assert.match(summary.disclaimer, /not model output or trading advice/i);
-  assert.deepEqual(
-    Object.keys(summary.selectedCutoff.outputs).sort(),
-    ["evidenceConfidence", "executability", "integrityRisk", "opportunity"],
-  );
-  for (const assessment of Object.values(summary.selectedCutoff.outputs)) {
-    assert.equal(assessment.status, "illustrative-heuristic-not-validated");
-  }
-  assert.equal(
-    summary.selectedCutoff.marketRegime.riskAppetiteScore0To100,
-    68,
-    "the 60-second regime record was not observed until 90 seconds and must be excluded",
-  );
+  assert.match(glossary, /<dt><strong>Execution path<\/strong>/i);
+  assert.match(glossary, /point-in-time entry/i);
+  assert.match(glossary, /not a complete path/i);
+  assert.doesNotMatch(glossary, /<dt><strong>HHI<\/strong>/i);
 });
 
-test("rejects unknown replay cutoffs", async () => {
-  const response = await render("/api/research?cutoff=tomorrow");
+test("returns the real coin-feed contract with honest source and storage states", async () => {
+  // Tracker-only is deterministic without a credential and avoids making the
+  // test suite depend on public-RPC throughput. It still exercises the exact
+  // production response contract and its unavailable-source truth state.
+  const response = await render("/api/coins?source=tracker&limit=2&enrich=false");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-research-data"), "real-live-and-stored-observations");
+  assert.equal(response.headers.get("x-source-policy"), "supported-apis-and-public-ledger-only");
+
+  const body = await response.json();
+  assert.match(body.generatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.ok(Array.isArray(body.coins));
+  body.coins.forEach(assertCoinShape);
+  assert.deepEqual(Object.keys(body.pagination).sort(), ["hasMore", "limit", "nextCursor"]);
+  assert.equal(body.pagination.limit, 2);
+  assert.equal(typeof body.pagination.hasMore, "boolean");
+  assert.equal(body.ingestion.requestedSource, "tracker");
+  assert.ok(Array.isArray(body.ingestion.discoverySources));
+  assert.ok(body.ingestion.discoverySources.includes("solana-tracker"));
+  assert.ok(Array.isArray(body.ingestion.coverage));
+  assert.ok(Array.isArray(body.ingestion.warnings));
+  assert.ok(STORAGE_STATES.has(body.ingestion.storage.state));
+  for (const coverage of body.ingestion.coverage) {
+    for (const field of [
+      "sourceId",
+      "signaturesScanned",
+      "transactionsRequested",
+      "transactionsDecoded",
+      "exactCreatesFound",
+      "exactMigrationsFound",
+      "newestEventAt",
+      "oldestEventAt",
+      "partial",
+    ]) assert.ok(field in coverage, `expected coverage.${field}`);
+  }
+  assert.doesNotMatch(JSON.stringify(body), /synthetic|illustrative fixture/i);
+  assert.doesNotMatch(JSON.stringify(body), /(?:api-key=|bearer )[A-Za-z0-9_-]{12,}/i);
+});
+
+test("rejects malformed feed cursors instead of silently restarting discovery", async () => {
+  const response = await render("/api/coins?cursor=definitely-not-a-returned-cursor");
   assert.equal(response.status, 400);
   const body = await response.json();
-  assert.equal(body.error, "invalid_cutoff");
+  assert.equal(body.error, "invalid_cursor");
+});
+
+test("rejects malformed exact-mint detail before contacting providers", async () => {
+  const response = await render("/api/coins/not-a-solana-mint");
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const body = await response.json();
+  assert.equal(body.error, "invalid_mint");
+  assert.match(body.message, /base58-encoded Solana address/i);
+});
+
+test("advanced collection GET is status-only and cannot consume provider quota", async () => {
+  const response = await render("/api/collection/token");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(
+    response.headers.get("x-research-data"),
+    "bounded-real-provider-observations",
+  );
+  assert.equal(response.headers.get("x-automatic-trading"), "disabled");
+
+  const body = await response.json();
+  assert.equal(body.schemaVersion, "memetrace-token-collection-control/v1");
+  assert.equal(body.executionMethod, "POST");
+  assert.equal(body.authentication, "x-backfill-token");
+  assert.equal(typeof body.configured, "boolean");
+  assert.equal(body.meteredCallsOnGet, false);
+  assert.equal(body.persistenceOnGet, false);
+  assert.equal(body.trading, "disabled");
+  assert.doesNotMatch(JSON.stringify(body), /api[_-]?key|bearer|bot[_-]?token/i);
+});
+
+test("point-in-time research rejects an unsupported cutoff without substituting a score", async () => {
+  const mint = "So11111111111111111111111111111111111111112";
+  const response = await render(
+    `/api/coins/${mint}/research?referenceClock=launch&cutoffSeconds=42`,
+  );
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-research-data"), "real-point-in-time-only");
+  assert.equal(response.headers.get("x-automatic-trading"), "disabled");
+  const body = await response.json();
+  assert.equal(body.status, "invalid_request");
+  assert.deepEqual(body.validCutoffSeconds, [30, 60, 300, 900, 3600]);
+  assert.equal("probability" in body, false);
+});
+
+test("model research reports persisted-data insufficiency and never injects a demo cohort", async () => {
+  const response = await render("/api/model/research");
+  assert.ok(response.status === 200 || response.status === 503);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(response.headers.get("x-research-data"), "persisted-point-in-time-only");
+  const body = await response.json();
+  assert.equal(body.status, "insufficient-data");
+  assert.equal(typeof body.acceptedExamples, "number");
+  assert.ok(body.acceptedExamples >= 0);
+  assert.equal("artifact" in body, false);
+  assert.doesNotMatch(JSON.stringify(body), /illustrative|synthetic|fixture/i);
+});
+
+test("alert status exposes the validated-shadow policy and never enables trading", async () => {
+  const response = await render("/api/alerts");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(
+    response.headers.get("x-alert-policy"),
+    "validated-shadow-predictions-only",
+  );
+  assert.equal(response.headers.get("x-trading-enabled"), "false");
+
+  const body = await response.json();
+  assert.equal(typeof body.enabled, "boolean");
+  assert.equal(typeof body.configured, "boolean");
+  assert.equal(typeof body.probabilityThreshold, "number");
+  assert.ok(body.probabilityThreshold >= 0 && body.probabilityThreshold <= 1);
+  assert.equal(body.policy, "validated-shadow-predictions-only");
+  assert.equal(body.tradingEnabled, false);
+  assert.doesNotMatch(JSON.stringify(body), /bot[_-]?token|chat[_-]?id/i);
+});
+
+test("protected research runners reject unauthenticated mutation requests", async () => {
+  for (const route of [
+    {
+      pathname: "/api/model/outcomes/materialize",
+      researchData: "manual-matured-outcome-materialization",
+      automaticTrading: "disabled",
+    },
+    {
+      pathname: "/api/pipeline/run",
+      pipeline: "bounded-protected-manual-run",
+      automaticTrading: "disabled",
+      transactionSubmission: "disabled",
+    },
+    {
+      pathname: "/api/alerts",
+      tradingEnabled: "false",
+    },
+  ]) {
+    const { pathname } = route;
+    const response = await render(pathname, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dryRun: true }),
+    });
+    assert.ok(response.status === 401 || response.status === 503);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    if (route.researchData) {
+      assert.equal(response.headers.get("x-research-data"), route.researchData);
+    }
+    if (route.pipeline) {
+      assert.equal(response.headers.get("x-research-pipeline"), route.pipeline);
+    }
+    if (route.automaticTrading) {
+      assert.equal(response.headers.get("x-automatic-trading"), route.automaticTrading);
+    }
+    if (route.transactionSubmission) {
+      assert.equal(response.headers.get("x-transaction-submission"), route.transactionSubmission);
+    }
+    if (route.tradingEnabled) {
+      assert.equal(response.headers.get("x-trading-enabled"), route.tradingEnabled);
+    }
+    const body = await response.json();
+    assert.ok(body.status === "unauthorized" || body.status === "not-configured");
+    assert.equal("outcomesWritten" in body, false);
+    assert.equal("delivered" in body, false);
+    assert.equal("coins" in body, false);
+  }
 });
 
 test("returns a complete policy-safe provider registry even when upstreams are unavailable", async () => {
@@ -262,46 +451,10 @@ test("returns a complete policy-safe provider registry even when upstreams are u
   assert.doesNotMatch(JSON.stringify(body), /(?:api-key=|bearer )[A-Za-z0-9_-]{12,}/i);
 });
 
-test("rejects malformed mint enrichment requests before contacting providers", async () => {
+test("legacy mint enrichment still rejects malformed addresses before provider calls", async () => {
   const response = await render("/api/sources/token?mint=not-a-solana-mint");
   assert.equal(response.status, 400);
   assert.equal(response.headers.get("cache-control"), "no-store");
   const body = await response.json();
   assert.equal(body.error, "invalid_mint");
-});
-
-test("returns the complete live-enrichment shape without requiring upstream success", async () => {
-  const mint = "So11111111111111111111111111111111111111112";
-  const response = await render(`/api/sources/token?mint=${mint}`);
-  assert.equal(response.status, 200);
-  assert.equal(response.headers.get("x-research-data"), "live-point-in-time-enrichment");
-
-  const body = await response.json();
-  assert.equal(body.mint, mint);
-  assert.equal(typeof body.meteredProvidersEnabled, "boolean");
-  assert.equal(typeof body.confirmation.confirmed, "boolean");
-  assert.ok(Array.isArray(body.confirmation.confirmingProviderIds));
-  if (!body.confirmation.confirmed) {
-    assert.deepEqual(body.confirmation.confirmingProviderIds, []);
-  }
-  assert.match(body.warning, /not a validated signal or trading instruction/i);
-  assert.deepEqual(
-    Object.keys(body.providers).sort(),
-    ["dexScreener", "helius", "jupiter", "solana", "solanaTracker", "xRecentCounts"],
-  );
-  for (const provider of Object.values(body.providers)) {
-    assert.ok(PROVIDER_STATES.has(provider.status.state));
-    assert.ok(provider.data === null || typeof provider.data === "object");
-  }
-  if (body.providers.dexScreener.data) {
-    assert.equal(
-      typeof body.providers.dexScreener.data.availability.pairs.available,
-      "boolean",
-    );
-    assert.equal(
-      typeof body.providers.dexScreener.data.availability.paidOrders.available,
-      "boolean",
-    );
-  }
-  assert.doesNotMatch(JSON.stringify(body), /(?:api-key=|bearer )[A-Za-z0-9_-]{12,}/i);
 });
