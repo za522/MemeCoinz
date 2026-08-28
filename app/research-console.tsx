@@ -1,15 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import type { GlossaryCategory } from "@/lib/documentation";
+import {
+  GLOSSARY_CATEGORIES,
+  RELEASE_NOTES,
+} from "@/lib/documentation";
+import { FULL_GLOSSARY_TERMS } from "@/lib/glossary-full";
 import type {
   CutoffLabel,
   EvidenceFidelity,
   IllustrativeAssessment,
   ResearchReplay,
   ResearchSummary,
-  SourceRecord,
 } from "@/lib/research";
 import { RESEARCH_CUTOFFS } from "@/lib/research";
+import type {
+  ProviderConnectionState,
+  ProviderRegistryEntry,
+  ProviderStatus,
+  SourceRegistryResponse,
+  TokenEnrichmentResponse,
+} from "@/lib/providers/types";
 
 type ConsoleMode = "replay" | "live";
 type ConsoleView =
@@ -19,7 +37,8 @@ type ConsoleView =
   | "narrative"
   | "execution"
   | "validation"
-  | "sources";
+  | "sources"
+  | "documentation";
 
 interface ResearchConsoleProps {
   replay: ResearchReplay;
@@ -33,6 +52,7 @@ const VIEWS: Array<{ id: ConsoleView; label: string; shortLabel: string }> = [
   { id: "execution", label: "Execution", shortLabel: "Execution" },
   { id: "validation", label: "Validation lab", shortLabel: "Validate" },
   { id: "sources", label: "Sources & fidelity", shortLabel: "Sources" },
+  { id: "documentation", label: "Docs & terminology", shortLabel: "Docs" },
 ];
 
 const FIDELITY_LABELS: Record<EvidenceFidelity, string> = {
@@ -40,6 +60,23 @@ const FIDELITY_LABELS: Record<EvidenceFidelity, string> = {
   reconstructed: "B · reconstructed",
   proxy: "C · proxy",
   unavailable: "D · unavailable",
+};
+
+const PROVIDER_STATE_LABELS: Record<ProviderConnectionState, string> = {
+  connected: "Live check passed",
+  degraded: "Check failed",
+  "configured-unverified": "Key installed",
+  "not-configured": "Needs server key",
+  "manual-only": "Manual reference",
+  disabled: "Disabled by policy",
+};
+
+const HISTORY_LABELS: Record<ProviderRegistryEntry["historicalCoverage"], string> = {
+  "canonical-archive": "Canonical archive if the RPC retains it",
+  "vendor-archive": "Vendor archive",
+  mixed: "Mixed or plan-dependent",
+  "live-only": "Current/live observations only",
+  none: "No automated history",
 };
 
 function formatUsd(value: number, maximumFractionDigits = 0) {
@@ -93,13 +130,17 @@ function FidelityBadge({ fidelity }: { fidelity: EvidenceFidelity }) {
   );
 }
 
-function StatusDot({ status }: { status: SourceRecord["status"] }) {
+function ProviderStateBadge({ status }: { status: ProviderStatus }) {
   return (
-    <span className={`status-label status-${status}`}>
-      <span aria-hidden="true" className="status-dot" />
-      {status}
+    <span className={`provider-state state-${status.state}`}>
+      <span aria-hidden="true" />
+      {PROVIDER_STATE_LABELS[status.state]}
     </span>
   );
+}
+
+function formatLatency(status: ProviderStatus) {
+  return status.latencyMs === null ? "Not probed" : `${formatNumber(status.latencyMs, 0)} ms`;
 }
 
 function ScoreRail({
@@ -452,7 +493,16 @@ function BriefView({ summary }: { summary: ResearchSummary }) {
   );
 }
 
-function CohortView({ replay }: { replay: ResearchReplay }) {
+function CohortView({
+  replay,
+  sourceRegistry,
+}: {
+  replay: ResearchReplay;
+  sourceRegistry: SourceRegistryResponse | null;
+}) {
+  const connectedProviders = sourceRegistry?.sources.filter(
+    (source) => source.status.state === "connected",
+  ).length ?? 0;
   return (
     <div className="view-stack">
       <section className="investigation-header">
@@ -467,7 +517,11 @@ function CohortView({ replay }: { replay: ResearchReplay }) {
       <div className="cohort-state" role="status">
         <div><span>Deployment dataset</span><strong>Fixture only</strong><small>1 synthetic launch</small></div>
         <div><span>Historical cohort</span><strong>Not ingested</strong><small>credential and coverage gate</small></div>
-        <div><span>Live shadow</span><strong>Not connected</strong><small>0 authenticated feeds</small></div>
+        <div>
+          <span>Provider probes</span>
+          <strong>{sourceRegistry ? `${connectedProviders} connected` : "Checking"}</strong>
+          <small>connectivity only, not cohort ingestion</small>
+        </div>
       </div>
       <div className="two-column-layout wide-left">
         <section className="panel cohort-table-panel" aria-labelledby="launch-feed-title">
@@ -963,65 +1017,392 @@ function ValidationView() {
   );
 }
 
-function SourcesView({ replay }: { replay: ResearchReplay }) {
+function TokenProviderResult({
+  label,
+  status,
+  children,
+}: {
+  label: string;
+  status: ProviderStatus;
+  children: ReactNode;
+}) {
+  return (
+    <div className="token-provider-result">
+      <div>
+        <strong>{label}</strong>
+        <ProviderStateBadge status={status} />
+      </div>
+      <p>{children}</p>
+      <small>{status.message}</small>
+    </div>
+  );
+}
+
+function SourcesView({
+  sourceRegistry,
+  sourceRegistryError,
+  sourceRegistryLoading,
+}: {
+  sourceRegistry: SourceRegistryResponse | null;
+  sourceRegistryError: string | null;
+  sourceRegistryLoading: boolean;
+}) {
+  const [mint, setMint] = useState("");
+  const [tokenResult, setTokenResult] = useState<TokenEnrichmentResponse | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
+
+  const sources = sourceRegistry?.sources ?? [];
+  const connected = sources.filter((source) => source.status.state === "connected").length;
+  const notLive = sources.filter((source) =>
+    source.status.state === "not-configured" || source.status.state === "configured-unverified",
+  ).length;
+  const restricted = sources.filter((source) =>
+    source.status.state === "manual-only" || source.status.state === "disabled",
+  ).length;
+  const degraded = sources.filter((source) => source.status.state === "degraded").length;
+
+  async function lookUpMint(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const requestedMint = mint.trim();
+    if (!requestedMint) {
+      setTokenError("Paste an exact Solana mint address first.");
+      return;
+    }
+    setTokenLoading(true);
+    setTokenError(null);
+    setTokenResult(null);
+    try {
+      const response = await fetch(`/api/sources/token?mint=${encodeURIComponent(requestedMint)}`, {
+        cache: "no-store",
+      });
+      const body = await response.json() as TokenEnrichmentResponse & {
+        error?: string | { message?: string };
+        message?: string;
+      };
+      if (!response.ok) {
+        const message = body.message ?? (typeof body.error === "string" ? body.error : body.error?.message);
+        throw new Error(message ?? "The source lookup failed.");
+      }
+      setTokenResult(body);
+    } catch (error) {
+      setTokenError(error instanceof Error ? error.message : "The source lookup failed.");
+    } finally {
+      setTokenLoading(false);
+    }
+  }
+
+  const dexPairs = tokenResult?.providers.dexScreener.data?.pairs ?? [];
+  const leadingPair = dexPairs[0] ?? null;
+
   return (
     <div className="view-stack">
-      <section className="investigation-header">
-        <span className="eyebrow">Sources & fidelity</span>
-        <h2>Every number carries a recovery contract</h2>
-        <p>
-          Historical availability is field-specific. Immutable ledger events are not the same as
-          mutable platform rank, historical profile state, or a quote response that was never
-          archived.
-        </p>
+      <section className="investigation-header source-intro">
+        <div>
+          <span className="eyebrow">Data connections</span>
+          <h2>Exact sources, exact interfaces, honest connection states</h2>
+          <p>
+            The server checks supported public APIs directly, keeps credentials server-only, and
+            refuses unsupported scraping. A working connection is infrastructure, not a validated
+            trading signal or a completed historical cohort.
+          </p>
+        </div>
+        <div className="source-check-time">
+          <span>Registry checked</span>
+          <strong>{sourceRegistry ? new Date(sourceRegistry.generatedAt).toLocaleTimeString("en-US", { timeZone: "UTC" }) : "Pending"}</strong>
+          <small>{sourceRegistry ? "UTC · server observation" : "waiting for server"}</small>
+        </div>
       </section>
-      <section className="panel source-table-panel" aria-labelledby="source-table-title">
+
+      <section className="source-connection-strip" aria-label="Provider connection summary">
+        <div><span>Live checks passed</span><strong>{sourceRegistryLoading ? "…" : connected}</strong><small>public read-only adapters</small></div>
+        <div><span>Not live yet</span><strong>{sourceRegistryLoading ? "…" : notLive}</strong><small>keys or collector work needed</small></div>
+        <div><span>Policy restricted</span><strong>{sourceRegistryLoading ? "…" : restricted}</strong><small>manual or partnership only</small></div>
+        <div><span>Failed checks</span><strong>{sourceRegistryLoading ? "…" : degraded}</strong><small>upstream or network error</small></div>
+      </section>
+
+      {sourceRegistryError ? (
+        <div className="source-load-error" role="alert">
+          <strong>Provider registry unavailable.</strong> {sourceRegistryError}
+        </div>
+      ) : null}
+
+      <section className="panel live-token-lookup" aria-labelledby="live-token-lookup-title">
+        <div className="section-heading compact">
+          <div>
+            <span className="eyebrow">Public-source proof</span>
+            <h3 id="live-token-lookup-title">Look up a real Solana mint</h3>
+          </div>
+          <span className="panel-tag">read-only · no trade</span>
+        </div>
+        <form onSubmit={lookUpMint}>
+          <label>
+            <span>Exact mint address</span>
+            <input
+              autoComplete="off"
+              onChange={(event) => setMint(event.target.value)}
+              placeholder="Paste a base58 Solana mint"
+              spellCheck={false}
+              value={mint}
+            />
+          </label>
+          <button disabled={tokenLoading} type="submit">
+            {tokenLoading ? "Checking sources…" : "Check live sources"}
+          </button>
+        </form>
+        <p className="lookup-scope-note">
+          This calls current Solana, DEX Screener, and Jupiter read-only adapters. Helius, Solana
+          Tracker, and X run only when their server credentials and the explicit metered-data gate
+          are enabled.
+        </p>
+        {tokenError ? <div className="lookup-error" role="alert">{tokenError}</div> : null}
+        {tokenResult ? (
+          <div className="token-lookup-result" aria-live="polite">
+            <div className="lookup-result-head">
+              <div><span>Mint checked</span><strong>{shortAddress(tokenResult.mint)}</strong></div>
+              <div><span>Metered providers</span><strong>{tokenResult.meteredProvidersEnabled ? "Enabled" : "Off by default"}</strong></div>
+              <p>{tokenResult.warning}</p>
+            </div>
+            <div className="token-provider-grid">
+              <TokenProviderResult label="Solana RPC" status={tokenResult.providers.solana.status}>
+                {tokenResult.providers.solana.data
+                  ? `${tokenResult.providers.solana.data.uiAmountString} tokens at slot ${formatNumber(tokenResult.providers.solana.data.contextSlot, 0)}`
+                  : "No token-supply observation returned."}
+              </TokenProviderResult>
+              <TokenProviderResult label="DEX Screener" status={tokenResult.providers.dexScreener.status}>
+                {leadingPair
+                  ? `${dexPairs.length} pool${dexPairs.length === 1 ? "" : "s"}; leading observed liquidity ${leadingPair.liquidityUsd === null ? "unknown" : formatUsd(leadingPair.liquidityUsd)} on ${leadingPair.dexId}.`
+                  : "No current Solana pool returned."}
+              </TokenProviderResult>
+              <TokenProviderResult label="Jupiter Price v3" status={tokenResult.providers.jupiter.status}>
+                {tokenResult.providers.jupiter.data?.usdPrice === null || !tokenResult.providers.jupiter.data
+                  ? "No current USD price returned."
+                  : `${formatUsd(tokenResult.providers.jupiter.data.usdPrice, 8)} observed at block ${tokenResult.providers.jupiter.data.blockId ?? "unknown"}.`}
+              </TokenProviderResult>
+              <TokenProviderResult label="Helius DAS" status={tokenResult.providers.helius.status}>
+                {tokenResult.providers.helius.data
+                  ? `${tokenResult.providers.helius.data.name ?? "Unnamed token"} ${tokenResult.providers.helius.data.symbol ? `(${tokenResult.providers.helius.data.symbol})` : ""}`
+                  : "Metadata and authority fields require the configured metered adapter."}
+              </TokenProviderResult>
+              <TokenProviderResult label="Solana Tracker" status={tokenResult.providers.solanaTracker.status}>
+                {tokenResult.providers.solanaTracker.data
+                  ? `${formatNumber(tokenResult.providers.solanaTracker.data.holders ?? 0, 0)} reported holders; vendor risk score ${tokenResult.providers.solanaTracker.data.riskScore ?? "unavailable"}.`
+                  : "Indexed holder, pool, creator, and risk fields require a server key."}
+              </TokenProviderResult>
+              <TokenProviderResult label="X recent counts" status={tokenResult.providers.xRecentCounts.status}>
+                {tokenResult.providers.xRecentCounts.data
+                  ? `${formatNumber(tokenResult.providers.xRecentCounts.data.totalPostCount, 0)} exact-mint posts in the returned window.`
+                  : "Exact-mint narrative counts require a server bearer token."}
+              </TokenProviderResult>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="panel provider-registry-panel" aria-labelledby="source-table-title">
         <div className="section-heading compact">
           <div>
             <span className="eyebrow">Provider registry</span>
-            <h3 id="source-table-title">Coverage, limits, and commercial use</h3>
+            <h3 id="source-table-title">APIs, credentials, and historical boundaries</h3>
           </div>
-          <span className="panel-tag">{replay.sources.length} source contracts</span>
+          <span className="panel-tag">{sources.length || "…"} named source contracts</span>
         </div>
-        <div className="table-wrap source-table-wrap">
-          <table>
-            <caption className="sr-only">Research provider status and fidelity</caption>
-            <thead><tr><th>Source</th><th>Status</th><th>History</th><th>Fidelity</th><th>Included fields</th><th>Known limitation</th></tr></thead>
-            <tbody>
-              {replay.sources.map((source) => (
-                <tr key={source.id}>
-                  <td><strong>{source.label}</strong><small>{source.kind}</small></td>
-                  <td><StatusDot status={source.status} /></td>
-                  <td>{source.temporalCoverage.replace("-", " ")}</td>
-                  <td><FidelityBadge fidelity={source.fidelity} /></td>
-                  <td>{source.fields.slice(0, 3).join(", ")}{source.fields.length > 3 ? ` +${source.fields.length - 3}` : ""}</td>
-                  <td>{source.limitation ?? "No material limitation recorded"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="connection-policy-note">
+          <span>Collection policy</span>
+          <p>
+            Unsupported scraping is disabled. Secrets stay on the server. Automatic trading is
+            disabled. Vendor fields retain provider attribution and are not presented as chain truth.
+          </p>
         </div>
+        {sourceRegistryLoading ? (
+          <div className="source-loading" role="status">Checking upstream sources from the server…</div>
+        ) : (
+          <div className="table-wrap provider-table-wrap">
+            <table>
+              <caption className="sr-only">Live provider connections and exact source interfaces</caption>
+              <thead>
+                <tr><th>Source</th><th>Connection</th><th>Exact interface</th><th>Fields / contract</th><th>Historical reach</th><th>Enable / boundary</th></tr>
+              </thead>
+              <tbody>
+                {sources.map((source) => (
+                  <tr key={source.id}>
+                    <td>
+                      <a href={source.officialUrl} rel="noreferrer" target="_blank">{source.label}</a>
+                      <small>{source.category.replace("-", " ")} · {source.access.replaceAll("-", " ")}</small>
+                    </td>
+                    <td>
+                      <ProviderStateBadge status={source.status} />
+                      <small>{formatLatency(source.status)}</small>
+                      <small>{source.statusMethod.replaceAll("-", " ")}</small>
+                      <p>{source.status.message}</p>
+                    </td>
+                    <td>
+                      <ul className="interface-list">
+                        {source.interfaces.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                      {source.documentationUrl ? <a className="documentation-link" href={source.documentationUrl} rel="noreferrer" target="_blank">Official documentation ↗</a> : null}
+                    </td>
+                    <td>
+                      {source.collects.length ? source.collects.join(", ") : "No automated collection"}
+                      {source.implementationNote ? <p className="implementation-note">{source.implementationNote}</p> : null}
+                    </td>
+                    <td>{HISTORY_LABELS[source.historicalCoverage]}</td>
+                    <td>
+                      <strong className="environment-variable">{source.environmentVariable ?? "No key"}</strong>
+                      <p>{source.limitations[0] ?? source.commercialUseNote}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+
       <section className="recovery-contract" aria-labelledby="recovery-contract-title">
         <div className="section-heading compact">
           <div>
-            <span className="eyebrow">Four fidelity classes</span>
-            <h3 id="recovery-contract-title">How historical evidence enters the model</h3>
+            <span className="eyebrow">Four historical fidelity classes</span>
+            <h3 id="recovery-contract-title">Connected does not mean historically recoverable</h3>
           </div>
         </div>
         <div className="fidelity-explainer">
           <div><FidelityBadge fidelity="exact" /><strong>Canonical event</strong><p>Immutable transaction, instruction, balance, or timestamp from archive infrastructure.</p></div>
           <div><FidelityBadge fidelity="reconstructed" /><strong>Deterministic replay</strong><p>Point-in-time state recomputed from complete earlier events and versioned logic.</p></div>
           <div><FidelityBadge fidelity="proxy" /><strong>Historical inference</strong><p>Useful but incomplete vendor history, heuristic clustering, or derived substitute.</p></div>
-          <div><FidelityBadge fidelity="unavailable" /><strong>Not recoverable</strong><p>Mutable or proprietary state that was never archived. Captured live from now on.</p></div>
+          <div><FidelityBadge fidelity="unavailable" /><strong>Not recoverable</strong><p>Mutable or proprietary state that was never archived. It must be captured prospectively.</p></div>
         </div>
       </section>
     </div>
   );
 }
 
-function LiveShadowView({ replay }: { replay: ResearchReplay }) {
-  const connected = replay.sources.filter((source) => source.status === "healthy").length;
+function DocumentationView() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<"All" | GlossaryCategory>("All");
+  const normalizedQuery = query.trim().toLowerCase();
+  const visibleTerms = FULL_GLOSSARY_TERMS.filter((item) => {
+    const inCategory = category === "All" || item.category === category;
+    const searchable = `${item.term} ${item.definition} ${item.whyItMatters ?? ""}`.toLowerCase();
+    return inCategory && (!normalizedQuery || searchable.includes(normalizedQuery));
+  });
+
+  return (
+    <div className="view-stack">
+      <section className="investigation-header documentation-intro">
+        <div>
+          <span className="eyebrow">Product documentation</span>
+          <h2>What changed, what the words mean, and what is still gated</h2>
+          <p>
+            This panel is the short operational record. Source-specific connection state and exact
+            API details live in Sources &amp; fidelity.
+          </p>
+        </div>
+        <div className="documentation-version" aria-label="Documentation version">
+          <span>Current release</span>
+          <strong>Provider layer 0.2</strong>
+          <small>Updated 28 Aug 2026</small>
+        </div>
+      </section>
+
+      <div className="documentation-layout">
+        <section className="panel change-log-panel" aria-labelledby="change-log-title">
+          <div className="section-heading compact">
+            <div>
+              <span className="eyebrow">Concise build log</span>
+              <h3 id="change-log-title">What was updated</h3>
+            </div>
+            <span className="panel-tag">append-only notes</span>
+          </div>
+          <div className="release-notes">
+            {RELEASE_NOTES.map((release, index) => (
+              <article className={index === 0 ? "current" : ""} key={`${release.date}-${release.title}`}>
+                <div>
+                  <time>{release.date}</time>
+                  {index === 0 ? <span>Current</span> : null}
+                </div>
+                <h4>{release.title}</h4>
+                <ul>
+                  {release.items.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </article>
+            ))}
+          </div>
+          <p className="method-note">
+            “Connected” means the deployed server successfully checked the upstream source. It
+            never means a source is historically complete or approved for raw-data resale.
+          </p>
+        </section>
+
+        <section className="panel glossary-panel" aria-labelledby="glossary-title">
+          <div className="section-heading compact">
+            <div>
+              <span className="eyebrow">Terminology appendix</span>
+              <h3 id="glossary-title">Plain-English definitions</h3>
+            </div>
+            <span className="panel-tag">{visibleTerms.length} terms shown</span>
+          </div>
+          <div className="glossary-tools">
+            <label>
+              <span className="sr-only">Search terminology</span>
+              <input
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search a term or idea"
+                type="search"
+                value={query}
+              />
+            </label>
+            <div className="glossary-categories" aria-label="Filter terminology by category">
+              {GLOSSARY_CATEGORIES.map((item) => (
+                <button
+                  aria-pressed={category === item}
+                  className={category === item ? "active" : ""}
+                  key={item}
+                  onClick={() => setCategory(item)}
+                  type="button"
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+          {visibleTerms.length ? (
+            <dl className="glossary-list">
+              {visibleTerms.map((item) => (
+                <div key={item.term}>
+                  <dt>
+                    <strong>{item.term}</strong>
+                    <span>{item.category}</span>
+                  </dt>
+                  <dd>{item.definition}</dd>
+                  {item.whyItMatters ? <dd className="why-it-matters"><b>Why it matters:</b> {item.whyItMatters}</dd> : null}
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <div className="glossary-empty" role="status">
+              No term matches this filter. Try a broader word or choose All.
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function LiveShadowView({
+  sourceRegistry,
+  sourceRegistryError,
+}: {
+  sourceRegistry: SourceRegistryResponse | null;
+  sourceRegistryError: string | null;
+}) {
+  const automatedSources = sourceRegistry?.sources.filter((source) => source.automated) ?? [];
+  const connected = automatedSources.filter((source) => source.status.state === "connected").length;
+  const configured = automatedSources.filter((source) =>
+    source.status.state === "configured-unverified" ||
+    (source.status.state === "connected" && Boolean(source.environmentVariable) && source.status.configured),
+  ).length;
   return (
     <div className="live-shadow-empty">
       <div className="live-radar" aria-hidden="true">
@@ -1029,25 +1410,32 @@ function LiveShadowView({ replay }: { replay: ResearchReplay }) {
         <i /><i /><i />
       </div>
       <span className="eyebrow">Prospective shadow mode</span>
-      <h2>Collector contracts are ready. Provider credentials are not installed.</h2>
+      <h2>{connected} source probes are connected. Prospective predictions have not started.</h2>
       <p>
-        Live mode intentionally refuses to manufacture an opportunity score. Once feeds are
-        connected, immutable predictions, router quotes, failures, rank snapshots, and social
-        state are written as observed.
+        The public provider layer is real, but it is not yet a complete launch collector. Live mode
+        refuses to turn partial connectivity into an opportunity score. A historical archive,
+        streaming ingestion, point-in-time features, and immutable paper predictions still need to
+        run together.
       </p>
       <div className="live-setup-summary">
-        <div><strong>{connected}/{replay.sources.length}</strong><span>fixture sources marked healthy</span></div>
-        <div><strong>0</strong><span>authenticated live feeds</span></div>
+        <div><strong>{connected}/{automatedSources.length || "…"}</strong><span>automated provider checks passed</span></div>
+        <div><strong>{configured}</strong><span>credentialed adapters configured</span></div>
         <div><strong>0</strong><span>capital at risk</span></div>
       </div>
       <div className="live-pillar-list">
-        {PILLAR_ROWS.map(([name]) => (
-          <div key={name}><span className="empty-status" aria-hidden="true" />{name}<small>awaiting live adapter</small></div>
+        {automatedSources.map((source) => (
+          <div key={source.id}>
+            <span className={source.status.state === "connected" ? "connected-status" : "empty-status"} aria-hidden="true" />
+            {source.label}
+            <small>{PROVIDER_STATE_LABELS[source.status.state]}</small>
+          </div>
         ))}
       </div>
+      {sourceRegistryError ? <p className="live-registry-error">Registry error: {sourceRegistryError}</p> : null}
       <p className="live-footnote">
-        Historical replay remains available in the adjacent mode. Automatic execution stays
-        disabled until prospective calibration and paper-fill gates pass.
+        Provider health means an upstream request worked. It does not mean history was ingested,
+        predictions were validated, or vendor redistribution is permitted. Automatic execution
+        remains disabled.
       </p>
     </div>
   );
@@ -1057,14 +1445,20 @@ function ViewContent({
   view,
   summary,
   replay,
+  sourceRegistry,
+  sourceRegistryError,
+  sourceRegistryLoading,
 }: {
   view: ConsoleView;
   summary: ResearchSummary;
   replay: ResearchReplay;
+  sourceRegistry: SourceRegistryResponse | null;
+  sourceRegistryError: string | null;
+  sourceRegistryLoading: boolean;
 }) {
   switch (view) {
     case "cohort":
-      return <CohortView replay={replay} />;
+      return <CohortView replay={replay} sourceRegistry={sourceRegistry} />;
     case "coordination":
       return <CoordinationView summary={summary} />;
     case "narrative":
@@ -1074,7 +1468,15 @@ function ViewContent({
     case "validation":
       return <ValidationView />;
     case "sources":
-      return <SourcesView replay={replay} />;
+      return (
+        <SourcesView
+          sourceRegistry={sourceRegistry}
+          sourceRegistryError={sourceRegistryError}
+          sourceRegistryLoading={sourceRegistryLoading}
+        />
+      );
+    case "documentation":
+      return <DocumentationView />;
     default:
       return <BriefView summary={summary} />;
   }
@@ -1085,7 +1487,13 @@ export function ResearchConsole({ replay, summaries }: ResearchConsoleProps) {
   const [view, setView] = useState<ConsoleView>("brief");
   const [cutoff, setCutoff] = useState<CutoffLabel>("5m");
   const [copied, setCopied] = useState(false);
+  const [sourceRegistry, setSourceRegistry] = useState<SourceRegistryResponse | null>(null);
+  const [sourceRegistryError, setSourceRegistryError] = useState<string | null>(null);
+  const [sourceRegistryLoading, setSourceRegistryLoading] = useState(true);
   const summary = summaries[cutoff];
+  const connectedProviderCount = sourceRegistry?.sources.filter(
+    (source) => source.status.state === "connected",
+  ).length ?? 0;
   const timestamp = useMemo(
     () =>
       new Date(summary.selectedCutoff.asOf).toLocaleString("en-US", {
@@ -1099,6 +1507,40 @@ export function ResearchConsole({ replay, summaries }: ResearchConsoleProps) {
       }),
     [summary.selectedCutoff.asOf],
   );
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSourceRegistry() {
+      try {
+        const response = await fetch("/api/sources", { cache: "no-store" });
+        const body = await response.json() as SourceRegistryResponse & {
+          error?: string | { message?: string };
+        };
+        if (!response.ok) {
+          const message = typeof body.error === "string" ? body.error : body.error?.message;
+          throw new Error(message ?? "The source registry request failed.");
+        }
+        if (active) {
+          setSourceRegistry(body);
+          setSourceRegistryError(null);
+        }
+      } catch (error) {
+        if (active) {
+          setSourceRegistryError(
+            error instanceof Error ? error.message : "The source registry request failed.",
+          );
+        }
+      } finally {
+        if (active) setSourceRegistryLoading(false);
+      }
+    }
+
+    void loadSourceRegistry();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function copyAddress() {
     try {
@@ -1119,13 +1561,15 @@ export function ResearchConsole({ replay, summaries }: ResearchConsoleProps) {
         </a>
         <nav aria-label="Product areas" className="product-nav">
           <button className={view === "cohort" ? "active" : ""} type="button" onClick={() => { setMode("replay"); setView("cohort"); }}>Launches</button>
-          <button className={view !== "cohort" && view !== "sources" ? "active" : ""} type="button" onClick={() => { setMode("replay"); setView("brief"); }}>Research lab</button>
+          <button className={view !== "cohort" && view !== "sources" && view !== "documentation" ? "active" : ""} type="button" onClick={() => { setMode("replay"); setView("brief"); }}>Research lab</button>
           <button className={view === "sources" ? "active" : ""} type="button" onClick={() => { setMode("replay"); setView("sources"); }}>Data coverage</button>
+          <button className={view === "documentation" ? "active" : ""} type="button" onClick={() => { setMode("replay"); setView("documentation"); }}>Documentation</button>
         </nav>
         <div className="header-status">
           <span className="environment-tag">Research preview</span>
           <button className="live-status-button" type="button" onClick={() => setMode("live")}>
-            <span aria-hidden="true" />Live shadow
+            <span aria-hidden="true" />
+            {sourceRegistryLoading ? "Checking sources" : `${connectedProviderCount} sources online`}
           </button>
         </div>
       </header>
@@ -1201,7 +1645,21 @@ export function ResearchConsole({ replay, summaries }: ResearchConsoleProps) {
         </nav>
 
         <div className="research-canvas">
-          {mode === "live" ? <LiveShadowView replay={replay} /> : <ViewContent replay={replay} summary={summary} view={view} />}
+          {mode === "live" ? (
+            <LiveShadowView
+              sourceRegistry={sourceRegistry}
+              sourceRegistryError={sourceRegistryError}
+            />
+          ) : (
+            <ViewContent
+              replay={replay}
+              sourceRegistry={sourceRegistry}
+              sourceRegistryError={sourceRegistryError}
+              sourceRegistryLoading={sourceRegistryLoading}
+              summary={summary}
+              view={view}
+            />
+          )}
         </div>
       </main>
 

@@ -31,6 +31,8 @@ test("server-renders the MemeTrace research console", async () => {
   assert.match(html, /Integrity risk/);
   assert.match(html, /Executability/);
   assert.match(html, /Evidence confidence/);
+  assert.match(html, /Sources &amp; fidelity/);
+  assert.match(html, /Docs &amp; terminology/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton/i);
 });
 
@@ -50,4 +52,28 @@ test("rejects unknown replay cutoffs", async () => {
   assert.equal(response.status, 400);
   const body = await response.json();
   assert.equal(body.error, "invalid_cutoff");
+});
+
+test("returns a policy-safe provider registry even when an upstream is unavailable", async () => {
+  const response = await render("/api/sources");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("x-source-policy"), "no-scraping");
+
+  const body = await response.json();
+  assert.equal(body.policy.secrets, "server-only");
+  assert.equal(body.policy.liveTrading, "disabled");
+  assert.ok(body.sources.some((source) => source.id === "solana-rpc"));
+  assert.ok(body.sources.some((source) => source.id === "dex-screener"));
+  assert.ok(body.sources.some((source) => source.id === "pump-onchain"));
+  assert.ok(body.sources.some((source) => source.id === "jito"));
+  assert.ok(body.sources.every((source) => Array.isArray(source.interfaces)));
+  assert.doesNotMatch(JSON.stringify(body), /(?:api-key=|bearer )[A-Za-z0-9_-]{12,}/i);
+});
+
+test("rejects malformed mint enrichment requests before contacting providers", async () => {
+  const response = await render("/api/sources/token?mint=not-a-solana-mint");
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const body = await response.json();
+  assert.equal(body.error, "invalid_mint");
 });
