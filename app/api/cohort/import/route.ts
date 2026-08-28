@@ -1,9 +1,4 @@
 import { authorizeCohortImport } from "@/lib/cohort/auth";
-import {
-  finalizeCohortImport,
-  initializeCohortImport,
-  writeCohortRows,
-} from "@/lib/cohort/repository";
 import { parseCohortImportRows } from "@/lib/cohort/validation";
 
 const headers = {
@@ -36,6 +31,11 @@ export async function POST(request: Request) {
     );
   }
   try {
+    const {
+      finalizeCohortImport,
+      initializeCohortImport,
+      writeCohortRows,
+    } = await import("@/lib/cohort/repository");
     if (body.action === "manifest") {
       return Response.json({ action: "manifest", dataset: await initializeCohortImport() }, { headers });
     }

@@ -1,4 +1,5 @@
 import {
+  isValidCohortCursor,
   listCohortLaunches,
   readCohortStatus,
 } from "@/lib/cohort/repository";
@@ -25,6 +26,13 @@ export async function GET(request: Request) {
     }
     const rawLimit = Number.parseInt(url.searchParams.get("limit") ?? "50", 10);
     const limit = Number.isFinite(rawLimit) ? rawLimit : 50;
+    const cursor = url.searchParams.get("cursor");
+    if (cursor && !isValidCohortCursor(cursor)) {
+      return Response.json(
+        { error: "invalid_cursor", message: "cursor is malformed or incompatible." },
+        { status: 400, headers },
+      );
+    }
     const rawStatus = url.searchParams.get("observedStatus") ?? "all";
     const allowed = new Set([
       "all",
@@ -40,7 +48,7 @@ export async function GET(request: Request) {
     }
     return Response.json(await listCohortLaunches({
       limit,
-      cursor: url.searchParams.get("cursor"),
+      cursor,
       observedStatus: rawStatus as CohortObservedStatus | "all",
     }), { headers });
   } catch (error) {

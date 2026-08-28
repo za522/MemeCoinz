@@ -35,7 +35,7 @@ MemeTrace has exactly three top-level screens. Research families are columns or 
 
 | Screen | One primary task | Content that leads | Success |
 |---|---|---|---|
-| **Coins** | Explore live coins | Real coin rows, age/stage, observed fields, filters, refresh state, and coverage | The user can select a real mint and understands whether discovery was canonical, accelerated, paid-profile-only, partial, or unavailable |
+| **Coins** | Explore coins | A clearly separated live feed and historical launch cohort | The user can browse current discovery or the stored historical denominator without confusing their evidence coverage |
 | **Coin report** | Understand this coin | Exact identity, reference clock, cutoff, point-in-time evidence, missing fields, outcomes, and model state | The user can separate observations from engineered features, hindsight labels, and untrained predictions |
 | **Data & methods** | Audit the research | Source interfaces and rights, collection coverage, feature/label definitions, validation, releases, and terminology | The user can trace a claim and see the prerequisites for a defensible result |
 
@@ -46,7 +46,7 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 ### Coins
 
 - Load a real feed automatically and offer a manual refresh. Do not make the user paste a contract before seeing coins.
-- Use **Explore live coins** as the current task heading. Launch tracking is the research goal, but the current bounded/paid-profile mix is not complete enough to call every returned row a newly observed launch.
+- Use **Explore coins** as the task heading and provide two plainly labelled datasets: **Live now** and **Historical cohort**. Never blend their rows or coverage claims.
 - Treat the feed as **recent discovery from bounded requests**, not a complete list of every launch. Show the active discovery sources, scan counts, oldest/newest event times, continuation state, and warnings.
 - Prefer exact Pump/PumpSwap create events decoded from Solana. When that bounded scan returns no usable launches, a DEX Screener paid-profile feed may supply a clearly labelled, biased fallback; an authorized Solana Tracker key may accelerate discovery.
 - If a deployed host cannot reach public providers and returns no coins, a credential-free browser request to DEX Screener's public profile/pair endpoints may recover real current rows. Mark them as browser-direct, unpersisted, selection-biased, noncanonical, and ineligible for training.
@@ -91,9 +91,9 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - Protected bounded collection input: Helius address history; Solana Tracker trades, holders/chart, bundler/risk classifications, and deployer history; X exact-mint/official-URL/full-name post search and counts; current Jupiter size-specific round-trip quotes; and current global Jito tip context. Metered Helius/Tracker/X or keyed Jupiter calls require explicit request authorization, the global cost gate, and the provider credential. No such provider credential is installed in the current local environment.
 - Protected manual pipeline input: one bounded request may orchestrate discovery, one detail load per selected coin, optional advanced collection, every elapsed clock/cutoff snapshot, exact validated-artifact shadow lookup, matured-outcome materialization, candidate-only training, and optional Telegram delivery. It is an operator runner, not a scheduler or trading engine.
 - Manual/reference-only sites: Pump.fun consumer pages, Fomo.family, Photon MemeScope, and memescope.net are not scraped.
-- Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only. R2 remains the declared destination for immutable raw evidence but is not populated here.
+- Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. The corrected RED-PUMP importer keeps its browseable compact launch index in D1 and its hash-verified immutable gzip sources privately in R2. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only.
 - Repository research code: point-in-time feature derivation, executable outcome labels, dataset leakage audit, regularized logistic ensemble training, calibration, chronological validation, relationships, ablations, and prediction intervals.
-- Unknown or unavailable in the current local environment: a complete historical Pump/PumpSwap cohort, continuous background capture, actual historical provider latency, resolved holder ownership, full narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
+- Unknown or unavailable in the current local environment: complete transaction/outcome history for the broad launch cohort, continuous background capture, actual historical provider latency, resolved holder ownership, full narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
 
 ## Current release: 0.4.0
 
@@ -109,12 +109,13 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - A strict supervised-model pipeline that audits leakage, trains only with enough real data, and returns an explicit insufficient-data state otherwise.
 - A protected manual pipeline runner that executes one bounded end-to-end maintenance pass across at most 10 coins. Metered collection is off by default, Telegram is opt-in/dry-run by default, and candidate models are never promoted automatically.
 - Protected candidate/validated model-artifact persistence, validated-only shadow prediction serving, and a disabled-by-default Telegram delivery runner with probability thresholding and delivery deduplication.
+- A separate historical launch view backed by the corrected 860,194-launch RED-PUMP corpus, with raw-source hashes, exact import counts, pagination, and censored outcomes preserved as unknown.
 - Exactly three user-facing screens and no synthetic coin as the default experience.
 
 ### Not available or not yet demonstrated
 
 - The bounded live scan is not a complete launch denominator, archive backfill, or always-on collector.
-- No real cohort large enough to train or validate a model has been established in this environment.
+- The broad launch cohort is large, but it lacks complete transaction paths and valid executable winner/loser labels, so it cannot by itself train or validate the intended model.
 - No matching validated model artifact or eligible shadow prediction currently exists, so the alert runner has nothing it may truthfully deliver.
 - No scheduler or current collector builds complete `execution_path` sequences across an outcome horizon; the manual materializer can label only qualifying paths that already exist in D1.
 - No forecast, feature importance, confidence interval, or profitability claim is shown as validated merely because its calculation code exists.

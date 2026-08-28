@@ -6,6 +6,7 @@ User-visible project changes are recorded here.
 
 - Added a reproducible import path for the corrected CC-BY-4.0 RED-PUMP-2026-v1 corpus, covering 860,194 unique launches from 8 May to 10 June 2026.
 - Added a compact D1 cohort index, private hash-verified R2 source storage, exact-count finalization, and a public paginated cohort/status API.
+- Split Coins into two plain dataset choices, **Live now** and **Historical cohort**, so a user can see the real stored denominator without confusing it with the bounded current feed.
 - Preserved the publisher's v1.4 correction: 1,651 observed fast graduations are positive evidence, while 831,290 `TIMEOUT` rows are right-censored—not failures, 24-hour outcomes, or valid negative model labels.
 - The cohort adds real scale and a denominator but not transaction histories, complete price paths, wallet graphs, historical narrative text, or executable profit labels; no trained edge is claimed.
 

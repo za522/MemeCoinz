@@ -1,10 +1,5 @@
-import { env } from "cloudflare:workers";
 import { authorizeCohortImport } from "@/lib/cohort/auth";
 import { RED_PUMP_DATASET } from "@/lib/cohort/constants";
-import {
-  initializeCohortImport,
-  recordRawObject,
-} from "@/lib/cohort/repository";
 
 const headers = {
   "Cache-Control": "no-store",
@@ -41,6 +36,10 @@ export async function PUT(request: Request) {
     );
   }
   try {
+    const [{ env }, { initializeCohortImport, recordRawObject }] = await Promise.all([
+      import("cloudflare:workers"),
+      import("@/lib/cohort/repository"),
+    ]);
     const body = await request.arrayBuffer();
     if (body.byteLength !== file.bytes) throw new Error("Received byte length changed during upload.");
     const actualHash = bytesToHex(await crypto.subtle.digest("SHA-256", body));

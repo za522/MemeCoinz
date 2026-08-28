@@ -27,6 +27,16 @@ export const GLOSSARY_CATEGORIES: Array<"All" | GlossaryCategory> = [
 
 export const RELEASE_NOTES = [
   {
+    date: "29 Aug 2026",
+    title: "First broad historical launch cohort",
+    items: [
+      "Added the corrected RED-PUMP-2026-v1 corpus as a separate historical dataset: 860,194 unique Pump launches observed from 8 May to 10 June 2026.",
+      "The source files are hash-verified and privately archived; the compact launch index is paginated rather than mounted all at once.",
+      "Kept 831,290 TIMEOUT records right-censored and visibly distinct from losses. Only 1,651 fast graduations are confirmed by this source.",
+      "This establishes launch scale, not a profitability model: transaction paths, wallet graphs, narrative history, executable exits, and valid negative labels still require separate collection.",
+    ],
+  },
+  {
     date: "28 Aug 2026",
     title: "Hosted live-feed recovery",
     items: [
@@ -45,7 +55,7 @@ export const RELEASE_NOTES = [
       "Added leakage-safe feature/outcome calculation plus a manual materializer that never turns missing paths into losses.",
       "Added strict walk-forward training, protected artifact persistence, and validated-only shadow predictions; the runner writes candidates only and insufficient data still produces no probability.",
       "Added a disabled-by-default, deduplicated Telegram research-alert runner; it cannot trade.",
-      "No provider credential, complete cohort, validated artifact, eligible alert, or trading edge is claimed in this environment.",
+      "No transaction-level outcome cohort, validated artifact, eligible alert, or trading edge is claimed in this environment.",
     ],
   },
   {

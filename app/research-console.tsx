@@ -15,6 +15,10 @@ import type {
   CoinListItem,
   CoinsListResponse,
 } from "@/lib/coins/types";
+import type {
+  CohortLaunchesResponse,
+  CohortObservedStatus,
+} from "@/lib/cohort/types";
 import { loadBrowserDexFallback } from "@/lib/ingestion/browser-fallback";
 import type { ReferenceClock } from "@/lib/model";
 import type { CoinResearchResponse } from "@/lib/research-pipeline";
@@ -40,6 +44,7 @@ import type {
 export type AppScreen = "coins" | "report" | "methods";
 type LookupState = "idle" | "loading" | "success" | "error";
 type CoinFeedState = "loading" | "ready" | "error";
+type CoinUniverse = "live" | "historical";
 
 interface ResearchConsoleProps {
   initialScreen?: AppScreen;
@@ -560,12 +565,155 @@ function CoinFeedTable({
   );
 }
 
+function historicalStatusLabel(status: CohortObservedStatus) {
+  if (status === "confirmed-fast-graduation") return "Confirmed fast graduation";
+  if (status === "right-censored") return "Outcome unknown after feed loss";
+  return "No published outcome";
+}
+
+function HistoricalCohortView({
+  cohort,
+  state,
+  error,
+  status,
+  onLoadMore,
+  onRefresh,
+  onStatus,
+}: {
+  cohort: CohortLaunchesResponse | null;
+  state: CoinFeedState;
+  error: string | null;
+  status: CohortObservedStatus | "all";
+  onLoadMore: () => void;
+  onRefresh: () => void;
+  onStatus: (value: CohortObservedStatus | "all") => void;
+}) {
+  const rows = cohort?.launches ?? [];
+  const counts = cohort?.dataset.counts;
+  const ready = cohort?.dataset.status === "ready";
+
+  return (
+    <>
+      <section className="feed-status" aria-labelledby="cohort-status-title">
+        <div>
+          <span className="kicker">Historical cohort</span>
+          <h2 id="cohort-status-title">
+            {state === "loading" && !cohort
+              ? "Loading the launch index"
+              : ready
+                ? `${formatNumber(counts?.launches, 0)} launches stored`
+                : "Cohort import not complete"}
+          </h2>
+          <p>Every observed Pump launch from 8 May to 10 June 2026 in the corrected RED-PUMP corpus.</p>
+        </div>
+        <button className="button-secondary" disabled={state === "loading"} onClick={onRefresh} type="button">
+          {state === "loading" ? "Refreshing…" : "Refresh cohort"}
+        </button>
+      </section>
+
+      {ready ? (
+        <section className="coverage-strip" aria-labelledby="cohort-counts-title">
+          <div>
+            <span className="kicker">Published evidence</span>
+            <h2 id="cohort-counts-title">What was actually observed</h2>
+          </div>
+          <dl>
+            <div><dt>Launches</dt><dd>{formatNumber(counts?.launches, 0)}</dd></div>
+            <div><dt>Fast graduations</dt><dd>{formatNumber(counts?.confirmedFastGraduations, 0)}</dd></div>
+            <div><dt>Outcome unknown</dt><dd>{formatNumber(counts?.rightCensored, 0)}</dd></div>
+            <div><dt>No outcome row</dt><dd>{formatNumber(counts?.withoutPublishedOutcome, 0)}</dd></div>
+          </dl>
+          <p className="feed-message">“Outcome unknown” is not a failure. The source stopped seeing most launches after roughly 2.77 minutes.</p>
+        </section>
+      ) : null}
+
+      <section className="coin-feed" aria-labelledby="historical-launches-title">
+        <div className="coin-feed-toolbar">
+          <div>
+            <span className="control-label">Observed result</span>
+            <div className="compact-segments cohort-filter" role="group" aria-label="Filter historical cohort by observed result">
+              {([
+                ["all", "All"],
+                ["confirmed-fast-graduation", "Fast graduation"],
+                ["right-censored", "Outcome unknown"],
+                ["without-published-outcome", "No outcome row"],
+              ] as const).map(([value, label]) => (
+                <button
+                  aria-pressed={status === value}
+                  key={value}
+                  onClick={() => onStatus(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div aria-live="polite" className="feed-message">
+          {state === "loading" && !cohort ? <p>Reading stored historical launches.</p> : null}
+          {error ? <p className="error-copy">Historical cohort failed: {error}</p> : null}
+          {!error && cohort && !ready ? <p>The verified source has not been loaded into this deployment yet.</p> : null}
+          {!error && ready && rows.length === 0 ? <p>No rows were returned for this page.</p> : null}
+        </div>
+
+        {ready && rows.length > 0 ? (
+          <div className="table-scroll coin-table-scroll" role="region" aria-label="Historical Pump launch cohort">
+            <table className="coin-table">
+              <caption>Real published launch records. A missing or censored outcome is not a loss.</caption>
+              <thead>
+                <tr><th>Coin</th><th>Launched</th><th>Initial cap</th><th>Links present</th><th>Observed result</th></tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.mint}>
+                    <td>
+                      <div className="coin-identity-cell">
+                        <span aria-hidden="true">{(row.symbol || "?").slice(0, 2).toUpperCase()}</span>
+                        <div>
+                          <strong>{row.name || "Unnamed token"} <small>${row.symbol || "?"}</small></strong>
+                          <code title={row.mint}>{shortAddress(row.mint)}</code>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{formatTime(row.createdAt)}</td>
+                    <td>{row.initialMarketCapSol === null ? "Unavailable" : `${formatNumber(row.initialMarketCapSol, 2)} SOL`}</td>
+                    <td>{[
+                      row.hasX ? "X" : null,
+                      row.hasWebsite ? "Website" : null,
+                      row.hasTelegram ? "Telegram" : null,
+                    ].filter(Boolean).join(", ") || "None recorded"}</td>
+                    <td>{historicalStatusLabel(row.observedStatus)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {ready && cohort?.pagination.hasMore ? (
+          <div className="feed-pagination">
+            <span>Showing {formatNumber(rows.length, 0)} stored launches</span>
+            <button className="button-secondary" disabled={state === "loading"} onClick={onLoadMore} type="button">
+              {state === "loading" ? "Loading…" : "Load older launches"}
+            </button>
+          </div>
+        ) : null}
+      </section>
+    </>
+  );
+}
+
 function CoinsScreen({
   registry,
   registryLoading,
   feed,
   feedState,
   feedError,
+  cohort,
+  cohortState,
+  cohortError,
+  cohortFilter,
   autoRefresh,
   enrichment,
   lookupState,
@@ -577,6 +725,9 @@ function CoinsScreen({
   onOpenCoin,
   onLoadMore,
   onRefresh,
+  onLoadMoreCohort,
+  onRefreshCohort,
+  onCohortFilter,
   onToggleAutoRefresh,
 }: {
   registry: SourceRegistryResponse | null;
@@ -584,6 +735,10 @@ function CoinsScreen({
   feed: CoinsListResponse | null;
   feedState: CoinFeedState;
   feedError: string | null;
+  cohort: CohortLaunchesResponse | null;
+  cohortState: CoinFeedState;
+  cohortError: string | null;
+  cohortFilter: CohortObservedStatus | "all";
   autoRefresh: boolean;
   enrichment: TokenEnrichmentResponse | null;
   lookupState: LookupState;
@@ -595,9 +750,13 @@ function CoinsScreen({
   onOpenCoin: (coin: CoinListItem) => void;
   onLoadMore: () => void;
   onRefresh: () => void;
+  onLoadMoreCohort: () => void;
+  onRefreshCohort: () => void;
+  onCohortFilter: (value: CohortObservedStatus | "all") => void;
   onToggleAutoRefresh: () => void;
 }) {
   const lookupCoverage = lookupRegistryCoverage(registry);
+  const [universe, setUniverse] = useState<CoinUniverse>("live");
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState<"all" | "bonding" | "graduated">("all");
   const [group, setGroup] = useState<CoinColumnGroup>("market");
@@ -614,9 +773,29 @@ function CoinsScreen({
     <>
       <ScreenHeading
         section="Coins"
-        title="Explore live coins"
-        description="These are real Solana tokens returned now. Canonical launches and partial discovery rows stay visibly distinct; open any row for its evidence."
+        title="Explore coins"
+        description="Review coins arriving now or browse the stored historical launch cohort. The two datasets stay separate because they answer different questions."
       />
+
+      <div className="compact-segments universe-switch" role="group" aria-label="Choose coin dataset">
+        <button aria-pressed={universe === "live"} onClick={() => setUniverse("live")} type="button">Live now</button>
+        <button aria-pressed={universe === "historical"} onClick={() => setUniverse("historical")} type="button">Historical cohort</button>
+      </div>
+
+      {universe === "historical" ? (
+        <HistoricalCohortView
+          cohort={cohort}
+          error={cohortError}
+          onLoadMore={onLoadMoreCohort}
+          onRefresh={onRefreshCohort}
+          onStatus={onCohortFilter}
+          state={cohortState}
+          status={cohortFilter}
+        />
+      ) : null}
+
+      {universe === "live" ? (
+        <>
 
       <section className="feed-status" aria-labelledby="feed-status-title">
         <div>
@@ -736,6 +915,8 @@ function CoinsScreen({
         </div>
         {lookupState === "success" && enrichment ? <CurrentLookupResult enrichment={enrichment} onOpen={onOpenCurrent} /> : null}
       </section>
+        </>
+      ) : null}
     </>
   );
 }
@@ -1123,7 +1304,7 @@ function DataMethodsScreen({
       <section className="method-section" aria-labelledby="method-title">
         <div className="section-title-row">
           <div><span className="kicker">Research method</span><h2 id="method-title">How a signal would earn trust</h2></div>
-          <p>The protocol exists. A real cohort and performance result do not.</p>
+          <p>A real launch cohort exists. A valid profitability cohort and model result do not.</p>
         </div>
         <MethodSteps />
         <details className="compact-disclosure method-contract">
@@ -1228,6 +1409,10 @@ export function ResearchConsole({
   const [feed, setFeed] = useState<CoinsListResponse | null>(null);
   const [feedState, setFeedState] = useState<CoinFeedState>("loading");
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [cohort, setCohort] = useState<CohortLaunchesResponse | null>(null);
+  const [cohortState, setCohortState] = useState<CoinFeedState>("loading");
+  const [cohortError, setCohortError] = useState<string | null>(null);
+  const [cohortFilter, setCohortFilter] = useState<CohortObservedStatus | "all">("all");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedCoin, setSelectedCoin] = useState<CoinListItem | null>(null);
   const [selectedMint, setSelectedMint] = useState<string | null>(null);
@@ -1240,6 +1425,29 @@ export function ResearchConsole({
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [enrichment, setEnrichment] = useState<TokenEnrichmentResponse | null>(null);
   const researchRequestId = useRef(0);
+
+  const loadCohort = useCallback(async (cursor?: string | null, append = false) => {
+    setCohortState("loading");
+    try {
+      const params = new URLSearchParams({ limit: "100" });
+      if (cursor) params.set("cursor", cursor);
+      if (cohortFilter !== "all") params.set("observedStatus", cohortFilter);
+      const response = await fetch(`/api/cohort/red-pump?${params.toString()}`, { cache: "no-store" });
+      const body = await response.json() as CohortLaunchesResponse & { error?: string; message?: string };
+      if (!response.ok) throw new Error(body.message ?? body.error ?? "Historical cohort request failed.");
+      setCohort((current) => {
+        if (!append || !current) return body;
+        const byMint = new Map(current.launches.map((row) => [row.mint, row]));
+        body.launches.forEach((row) => byMint.set(row.mint, row));
+        return { ...body, launches: [...byMint.values()] };
+      });
+      setCohortError(null);
+      setCohortState("ready");
+    } catch (error) {
+      setCohortError(error instanceof Error ? error.message : "Historical cohort request failed.");
+      setCohortState("error");
+    }
+  }, [cohortFilter]);
 
   const loadFeed = useCallback(async (cursor?: string | null, append = false) => {
     setFeedState("loading");
@@ -1357,6 +1565,11 @@ export function ResearchConsole({
     const timer = window.setTimeout(() => { void loadFeed(); }, 0);
     return () => window.clearTimeout(timer);
   }, [loadFeed]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void loadCohort(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadCohort]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -1491,6 +1704,10 @@ export function ResearchConsole({
         {screen === "coins" ? (
           <CoinsScreen
             autoRefresh={autoRefresh}
+            cohort={cohort}
+            cohortError={cohortError}
+            cohortFilter={cohortFilter}
+            cohortState={cohortState}
             enrichment={enrichment}
             feed={feed}
             feedError={feedError}
@@ -1502,7 +1719,10 @@ export function ResearchConsole({
             onOpenCoin={openCoin}
             onOpenCurrent={openLookupReport}
             onLoadMore={() => { void loadFeed(feed?.pagination.nextCursor, true); }}
+            onLoadMoreCohort={() => { void loadCohort(cohort?.pagination.nextCursor, true); }}
+            onCohortFilter={setCohortFilter}
             onRefresh={() => { void loadFeed(); }}
+            onRefreshCohort={() => { void loadCohort(); }}
             onSubmit={submitMint}
             onToggleAutoRefresh={() => setAutoRefresh((value) => !value)}
             registry={registry}
@@ -1532,7 +1752,7 @@ export function ResearchConsole({
                 title="Choose a coin first"
                 description="Open a real row from Coins or paste an exact mint address. Reports never default to invented token data."
               />
-              <button className="button-primary" onClick={backToCoins} type="button">Go to live coins</button>
+              <button className="button-primary" onClick={backToCoins} type="button">Go to coins</button>
             </section>
           )
         ) : null}

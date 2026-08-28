@@ -186,6 +186,7 @@ export async function writeCohortRows(rows: CohortImportRow[]): Promise<number> 
       json_extract(value, '$.observedGraduationAtMs'),
       json_extract(value, '$.observedGraduationMinutes')
     FROM json_each(?)
+    WHERE 1 = 1
     ON CONFLICT(mint) DO UPDATE SET
       dataset_id = excluded.dataset_id,
       created_at_ms = excluded.created_at_ms,
@@ -284,6 +285,10 @@ function decodeCursor(value: string | null): CursorValue | null {
   } catch {
     return null;
   }
+}
+
+export function isValidCohortCursor(value: string): boolean {
+  return decodeCursor(value) !== null;
 }
 
 function publicStatus(value: number): CohortObservedStatus {

@@ -1384,6 +1384,15 @@ td {
   color: var(--raised);
 }
 
+.universe-switch {
+  margin-top: 32px;
+  max-width: 360px;
+}
+
+.universe-switch + .feed-status {
+  margin-top: 24px;
+}
+
 .feed-message {
   color: var(--muted);
   min-height: 0;
@@ -1719,6 +1728,10 @@ footer p {
   .compact-segments {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cohort-filter {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .compact-segments button {

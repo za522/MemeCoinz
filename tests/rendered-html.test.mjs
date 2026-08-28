@@ -152,7 +152,9 @@ test("server-renders exactly three primary destinations", async () => {
   const html = await response.text();
   assert.match(html, /<title>MemeTrace · [^<]+<\/title>/i);
   assertPrimaryNav(html, "Coins");
-  assertSemanticScreen(html, "Explore live coins");
+  assertSemanticScreen(html, "Explore coins");
+  assert.match(visibleHtml(html), /Live now/i);
+  assert.match(visibleHtml(html), /Historical cohort/i);
 });
 
 test("Coins defaults to an honest real-feed loading state, not demo data", async () => {
@@ -193,7 +195,7 @@ test("Coin report requires a real selection and never defaults to an invented to
   assertSemanticScreen(html, "Choose a coin first");
   assert.match(visible, /Open a real row from Coins or paste an exact mint address/i);
   assert.match(visible, /Reports never default to invented token data/i);
-  assert.match(visible, /Go to live coins/i);
+  assert.match(visible, /Go to coins/i);
   assert.doesNotMatch(visible, /Synthetic demo|illustrative heuristic|Evidence available 5 minutes/i);
 });
 
@@ -326,6 +328,23 @@ test("advanced collection GET is status-only and cannot consume provider quota",
   assert.equal(body.persistenceOnGet, false);
   assert.equal(body.trading, "disabled");
   assert.doesNotMatch(JSON.stringify(body), /api[_-]?key|bearer|bot[_-]?token/i);
+});
+
+test("cohort import and raw storage reject unauthenticated writes", async () => {
+  const importResponse = await render("/api/cohort/import", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "manifest" }),
+  });
+  assert.ok(importResponse.status === 401 || importResponse.status === 503);
+  assert.equal(importResponse.headers.get("cache-control"), "no-store");
+  assert.equal((await importResponse.json()).error === "unauthorized" || importResponse.status === 503, true);
+
+  const rawResponse = await render("/api/cohort/raw?filename=red_pump_2026_v1_launches.jsonl.gz", {
+    method: "PUT",
+  });
+  assert.ok(rawResponse.status === 401 || rawResponse.status === 503);
+  assert.equal(rawResponse.headers.get("cache-control"), "no-store");
 });
 
 test("point-in-time research rejects an unsupported cutoff without substituting a score", async () => {

@@ -23,13 +23,13 @@ A beginner or analyst uses MemeTrace mainly on a laptop in daylight, deliberatel
 
 | Screen | Primary task | Leading content |
 |---|---|---|
-| **Coins** | Explore live coins | Real coin table, refresh state, filters, source coverage, and exact-mint lookup |
+| **Coins** | Explore coins | A dataset switch followed by either the live table or the historical launch cohort |
 | **Coin report** | Understand this coin | Exact identity, reference clock/cutoff, observations, engineered features, outcomes, model state, and provenance |
 | **Data & methods** | Audit the research | Source states and rights, collection coverage, feature/label/model definitions, releases, and terminology |
 
 Use a small three-destination header. Do not add a sidebar, Research Lab screen, Live Shadow mode, top-level feature tabs, or a second navigation menu inside each screen.
 
-The screen task is always the clearest heading: **Explore live coins**, **Understand this coin**, or **Audit the research**. “Explore” is intentional until discovery covers a complete launch denominator; brand copy, source badges, scores, and technical concepts never outrank it.
+The screen task is always the clearest heading: **Explore coins**, **Understand this coin**, or **Audit the research**. The Coins screen separates **Live now** from **Historical cohort** before showing any rows; brand copy, source badges, scores, and technical concepts never outrank that choice.
 
 ## Information hierarchy
 
