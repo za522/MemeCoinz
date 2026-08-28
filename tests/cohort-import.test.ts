@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   COHORT_IMPORT_BATCH_LIMIT,
   RED_PUMP_DATASET,
+  parseCohortFeatureAggregateRows,
   parseCohortFeatureRows,
   parseCohortImportRows,
 } from "../lib/cohort/index";
@@ -96,5 +97,25 @@ test("calculated cohort rows require bounded, versioned research features", () =
   assert.match(
     parseCohortFeatureRows([{ ...feature, narrativeNovelty0To100: 101 }]).error ?? "",
     /0 to 100/,
+  );
+});
+
+test("descriptive association imports require internally consistent denominators", () => {
+  const aggregate = {
+    featureSetVersion: "red-pump-metadata-v1",
+    dimension: "social_link_count",
+    bucket: "3",
+    bucketOrder: 3,
+    launches: 100,
+    confirmedFastGraduations: 2,
+    rightCensored: 90,
+    withoutPublishedOutcome: 8,
+    lowerBoundRatePct: 2,
+    computedAt: "2026-08-29T00:00:00.000Z",
+  };
+  assert.equal(parseCohortFeatureAggregateRows([aggregate]).error, null);
+  assert.match(
+    parseCohortFeatureAggregateRows([{ ...aggregate, launches: 99 }]).error ?? "",
+    /sum to launches/,
   );
 });

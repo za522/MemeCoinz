@@ -42,6 +42,19 @@ export interface CohortFeatureImportRow {
   computedAt: string;
 }
 
+export interface CohortFeatureAggregateImportRow {
+  featureSetVersion: string;
+  dimension: string;
+  bucket: string;
+  bucketOrder: number;
+  launches: number;
+  confirmedFastGraduations: number;
+  rightCensored: number;
+  withoutPublishedOutcome: number;
+  lowerBoundRatePct: number;
+  computedAt: string;
+}
+
 export interface CohortCalculatedFeatures {
   featureSetVersion: string;
   narrativeTheme: string;

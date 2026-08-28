@@ -13,8 +13,9 @@ User-visible project changes are recorded here.
 - Preserved two sub-second source clock discrepancies in the normalized archive while clamping app-facing availability to the on-chain creation time, so no feature can appear available before launch.
 - Calculated chronology-safe metadata/narrative features for all 860,194 rows: theme, classifier confidence, metadata completeness, social links, name/symbol reuse, theme and total launch rates, novelty, copy pressure, and observation lag.
 - Added 60 descriptive cohort association rows spanning narrative, metadata, novelty, copy pressure, reuse, launch rate, and lag. Rates use confirmed fast graduation as a lower-bound outcome and keep censored/unknown rows in the denominator.
+- Added protected, idempotent deployment upload support for all 860,194 calculated feature rows and the 60 precomputed association buckets.
 - Added a free direct collector with live/archive modes, checkpointed public Solana RPC scanning, exact Pump decoding, public DEX Screener/Jupiter enrichment, protected bounded ingestion, and optional watch mode.
-- Verified local free-source passes that persisted two canonical Pump launches, 28 real observations (including 18 size-specific execution quotes), and six elapsed point-in-time snapshots. This is an operational proof, not population coverage or predictive validation.
+- At the 28 August 2026 verification checkpoint, local free-source passes had persisted two canonical Pump launches, 51 real observations (including 37 size-specific execution quotes), and nine elapsed point-in-time snapshots. The watcher continues after that checkpoint. This is an operational proof, not population coverage or predictive validation.
 - Preserved confirmed canonical asset fields monotonically and rehydrated stored market observations when a runtime cannot currently reach upstream providers.
 - The cohort adds real scale, calculated metadata/narrative research, and descriptive associations but not transaction histories, complete price paths, wallet graphs, historical social text, or executable profit labels; no trained edge is claimed.
 

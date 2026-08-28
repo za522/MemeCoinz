@@ -26,6 +26,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 - A protected, idempotent importer for the corrected CC-BY-4.0 RED-PUMP-2026-v1 corpus: 860,194 unique launches, immutable source files in R2, and a compact browseable D1 index with censored outcomes kept distinct from losses.
 - Chronology-safe metadata/narrative features materialized for all 860,194 cohort rows, including theme, novelty, copy pressure, launch-rate context, name/symbol reuse, social-link count, metadata completeness, and observation lag.
 - Descriptive cohort associations for every calculated feature family, reported as confirmed-fast-graduation lower bounds with censored/unknown launches retained in the denominator.
+- Idempotent protected upload paths for the cohort rows, all calculated feature rows, and the 60 precomputed descriptive association buckets, so a deployed D1 can reproduce the verified local research layer without bundling the dataset into application source.
 - A free direct collector (`npm run collect:free`) that scans official Pump activity through public Solana RPC, decodes only exact official instructions, enriches confirmed mints through public DEX Screener/Jupiter reads, checkpoints progress, persists bounded evidence, and can repeat in watch mode.
 - Server-only source registry and exact source/rights documentation.
 
@@ -124,6 +125,8 @@ The exact research-route query parameters and response contract are documented i
 ## Persistence
 
 The Cloudflare D1 schema contains normalized `sources`, `assets`, `observations`, `feature_snapshots`, `outcomes`, `predictions`, `execution_probes`, `experiments`, `model_artifacts`, `alert_deliveries`, `cohort_imports`, compact `cohort_launches`, `cohort_launch_features`, and `cohort_feature_aggregates`. The RED-PUMP importer stores verified raw gzip files privately in `RAW_RESEARCH`; its browseable launch index, calculated features, and descriptive associations live in D1. Current request paths write assets/observations and eligible feature snapshots; the direct collector uses a protected bounded ingestion route. Strong canonical fields are monotonic: a weaker fallback refresh cannot erase a confirmed creation signature or slot. The protected manual materializer can write a matured outcome only from a complete, exact-aligned `execution_path` already stored in D1; current Jupiter probes are ephemeral `execution_quote` rows, not that path. Protected research actions can persist immutable model artifacts, an exact validated artifact can write a shadow prediction, and the alert runner records one delivery state per prediction/channel. The manual pipeline orchestrates those same bounded writes and always stores trained artifacts as candidates; it adds no new fidelity, scheduler, or serving permission.
+
+`scripts/upload_red_pump.py` uploads the verified launch/outcome corpus and raw files. `scripts/upload_cohort_research.py` separately uploads the calculated feature layer and association buckets from a materialized local SQLite/D1 file. Both routes are admin-only, bounded, retryable, and idempotent.
 
 Storage never increases source fidelity. Every observation retains its source, event/observation/availability/retrieval time, commitment/canonical state, signature/slot where available, normalized payload, and missing reason.
 

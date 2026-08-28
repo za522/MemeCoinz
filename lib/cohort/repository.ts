@@ -5,6 +5,7 @@ import {
   RED_PUMP_DATASET,
 } from "./constants";
 import type {
+  CohortFeatureAggregateImportRow,
   CohortImportRow,
   CohortFeatureImportRow,
   CohortLaunchListItem,
@@ -270,6 +271,35 @@ export async function writeCohortFeatureRows(rows: CohortFeatureImportRow[]): Pr
       narrative_novelty_0_to_100 = excluded.narrative_novelty_0_to_100,
       copy_pressure_0_to_100 = excluded.copy_pressure_0_to_100,
       observation_lag_ms = excluded.observation_lag_ms,
+      computed_at = excluded.computed_at`,
+  ).bind(JSON.stringify(rows)).run();
+  return typeof result.meta.changes === "number" ? result.meta.changes : rows.length;
+}
+
+export async function writeCohortFeatureAggregateRows(
+  rows: CohortFeatureAggregateImportRow[],
+): Promise<number> {
+  const result = await env.DB.prepare(
+    `INSERT INTO cohort_feature_aggregates (
+      feature_set_version, dimension, bucket, bucket_order, launches,
+      confirmed_fast_graduations, right_censored, without_published_outcome,
+      lower_bound_rate_pct, computed_at
+    )
+    SELECT
+      json_extract(value, '$.featureSetVersion'), json_extract(value, '$.dimension'),
+      json_extract(value, '$.bucket'), json_extract(value, '$.bucketOrder'),
+      json_extract(value, '$.launches'), json_extract(value, '$.confirmedFastGraduations'),
+      json_extract(value, '$.rightCensored'), json_extract(value, '$.withoutPublishedOutcome'),
+      json_extract(value, '$.lowerBoundRatePct'), json_extract(value, '$.computedAt')
+    FROM json_each(?)
+    WHERE 1 = 1
+    ON CONFLICT(feature_set_version, dimension, bucket) DO UPDATE SET
+      bucket_order = excluded.bucket_order,
+      launches = excluded.launches,
+      confirmed_fast_graduations = excluded.confirmed_fast_graduations,
+      right_censored = excluded.right_censored,
+      without_published_outcome = excluded.without_published_outcome,
+      lower_bound_rate_pct = excluded.lower_bound_rate_pct,
       computed_at = excluded.computed_at`,
   ).bind(JSON.stringify(rows)).run();
   return typeof result.meta.changes === "number" ? result.meta.changes : rows.length;

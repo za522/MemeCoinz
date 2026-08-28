@@ -1,5 +1,9 @@
 import { authorizeCohortImport } from "@/lib/cohort/auth";
-import { parseCohortFeatureRows, parseCohortImportRows } from "@/lib/cohort/validation";
+import {
+  parseCohortFeatureAggregateRows,
+  parseCohortFeatureRows,
+  parseCohortImportRows,
+} from "@/lib/cohort/validation";
 
 const headers = {
   "Cache-Control": "no-store",
@@ -34,6 +38,7 @@ export async function POST(request: Request) {
     const {
       finalizeCohortImport,
       initializeCohortImport,
+      writeCohortFeatureAggregateRows,
       writeCohortFeatureRows,
       writeCohortRows,
     } = await import("@/lib/cohort/repository");
@@ -70,6 +75,20 @@ export async function POST(request: Request) {
         lastMint: parsed.rows.at(-1)?.mint ?? null,
       }, { headers });
     }
+    if (body.action === "feature-aggregates") {
+      const parsed = parseCohortFeatureAggregateRows(body.rows);
+      if (parsed.error) {
+        return Response.json(
+          { error: "invalid_feature_aggregate_rows", message: parsed.error },
+          { status: 400, headers },
+        );
+      }
+      return Response.json({
+        action: "feature-aggregates",
+        accepted: parsed.rows.length,
+        changed: await writeCohortFeatureAggregateRows(parsed.rows),
+      }, { headers });
+    }
     if (body.action === "finalize") {
       const dataset = await finalizeCohortImport();
       return Response.json(
@@ -78,7 +97,10 @@ export async function POST(request: Request) {
       );
     }
     return Response.json(
-      { error: "invalid_action", message: "action must be manifest, rows, features, or finalize." },
+      {
+        error: "invalid_action",
+        message: "action must be manifest, rows, features, feature-aggregates, or finalize.",
+      },
       { status: 400, headers },
     );
   } catch (error) {

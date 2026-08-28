@@ -3,8 +3,11 @@ import {
   COHORT_IMPORT_BATCH_LIMIT,
   OBSERVED_STATUS,
 } from "./constants";
-import type { CohortImportRow } from "./types";
-import type { CohortFeatureImportRow } from "./types";
+import type {
+  CohortFeatureAggregateImportRow,
+  CohortFeatureImportRow,
+  CohortImportRow,
+} from "./types";
 
 function finiteInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value);
@@ -171,6 +174,59 @@ export function parseCohortFeatureRows(value: unknown): {
       return { rows: [], error: `rows[${index}].computedAt is invalid.` };
     }
     rows.push(row as unknown as CohortFeatureImportRow);
+  }
+  return { rows, error: null };
+}
+
+export function parseCohortFeatureAggregateRows(value: unknown): {
+  rows: CohortFeatureAggregateImportRow[];
+  error: string | null;
+} {
+  if (!Array.isArray(value) || value.length < 1 || value.length > COHORT_IMPORT_BATCH_LIMIT) {
+    return { rows: [], error: `rows must contain 1–${COHORT_IMPORT_BATCH_LIMIT} records.` };
+  }
+  const rows: CohortFeatureAggregateImportRow[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < value.length; index += 1) {
+    const candidate = value[index];
+    if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+      return { rows: [], error: `rows[${index}] must be an object.` };
+    }
+    const row = candidate as Record<string, unknown>;
+    for (const field of ["featureSetVersion", "dimension", "bucket"] as const) {
+      if (typeof row[field] !== "string" || row[field].length < 1 || row[field].length > 256) {
+        return { rows: [], error: `rows[${index}].${field} is invalid.` };
+      }
+    }
+    const key = `${row.featureSetVersion}\u0000${row.dimension}\u0000${row.bucket}`;
+    if (seen.has(key)) return { rows: [], error: `rows[${index}] duplicates an aggregate key.` };
+    seen.add(key);
+    for (const field of [
+      "bucketOrder",
+      "launches",
+      "confirmedFastGraduations",
+      "rightCensored",
+      "withoutPublishedOutcome",
+    ] as const) {
+      if (!finiteInteger(row[field]) || row[field] < 0) {
+        return { rows: [], error: `rows[${index}].${field} must be a non-negative integer.` };
+      }
+    }
+    if (
+      row.confirmedFastGraduations as number
+        + (row.rightCensored as number)
+        + (row.withoutPublishedOutcome as number)
+      !== row.launches
+    ) {
+      return { rows: [], error: `rows[${index}] outcome counts must sum to launches.` };
+    }
+    if (!boundedNumber(row.lowerBoundRatePct, 0, 100)) {
+      return { rows: [], error: `rows[${index}].lowerBoundRatePct must be from 0 to 100.` };
+    }
+    if (typeof row.computedAt !== "string" || !Number.isFinite(Date.parse(row.computedAt))) {
+      return { rows: [], error: `rows[${index}].computedAt is invalid.` };
+    }
+    rows.push(row as unknown as CohortFeatureAggregateImportRow);
   }
   return { rows, error: null };
 }
