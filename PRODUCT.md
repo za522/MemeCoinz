@@ -29,6 +29,8 @@ The product combines a real launch feed, an evidence report for one exact mint, 
 
 The first broad historical launch index is the corrected RED-PUMP-2026-v1 corpus (860,194 unique Pump launches observed from 8 May to 10 June 2026). Every row now has a chronology-safe metadata/narrative feature record and the app reports descriptive feature associations against confirmed fast graduation. This is useful research evidence, but not a profitability label: its `TIMEOUT` rows are right-censored after a short rolling-feed visibility window and must never be treated as failed or unprofitable coins.
 
+An offline candidate baseline now tests the narrower operational question with a chronological holdout. It ranks observer-confirmed very-fast graduations above the test-set base rate, including after first-observed market cap is removed. It remains separate from the app's serving pipeline: the scores are uncalibrated ranks, the label is not profit, and no live alert or trade may use this artifact.
+
 ## Screen map
 
 MemeTrace has exactly three top-level screens. Research families are columns or report sections, not additional navigation.
@@ -94,7 +96,7 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 - Free direct collector: an operator process queries the official public Solana RPC, applies the same exact Pump decoder, enriches confirmed mints through public DEX Screener and Jupiter reads, persists bounded normalized evidence through a protected local route, checkpoints archive progress, and can repeat in watch mode. Public RPC remains best-effort and has no archive-completeness guarantee.
 - Persistence: normalized assets/observations and eligible elapsed feature snapshots are written when a Cloudflare D1 `DB` binding is present. The corrected RED-PUMP importer keeps its browseable compact launch index plus chronology-safe calculated feature layer and aggregate associations in D1; verified raw gzip sources can additionally be preserved privately in R2, with that status reported separately. Existing aligned outcomes can be read; a separate protected, bounded materializer writes only labels backed by complete, mature, cutoff-aligned `execution_path` rows. Protected research actions can persist immutable candidate/validated model artifacts; a matching validated artifact can produce and persist a shadow prediction. The alert runner records deduplicated Telegram delivery attempts. Without D1, live research responses still return with storage marked unavailable/read-only.
 - Repository research code: point-in-time feature derivation, executable outcome labels, dataset leakage audit, regularized logistic ensemble training, calibration, chronological validation, relationships, ablations, and prediction intervals.
-- Unknown or unavailable in the current local environment: complete transaction/outcome history for the broad launch cohort, durable hosted scheduling, actual historical provider latency, resolved holder ownership, full social narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, trained model performance, an eligible validated artifact, configured Telegram delivery, paper trading, and live trading.
+- Unknown or unavailable in the current local environment: complete transaction/profit-outcome history for the broad launch cohort, durable hosted scheduling, actual historical provider latency, resolved holder ownership, full social narrative bodies/embeddings, authenticated Helius/Tracker/X data, archive-complete bundle evidence, an eligible validated serving artifact, configured Telegram delivery, paper trading, and live trading. The separate offline fast-graduation candidate has measured ranking performance only for its narrower observer-confirmed event label.
 
 ## Current release: 0.5.0
 
@@ -118,7 +120,7 @@ Do not restore Research Lab, Data Coverage, Live Shadow, feature-family tabs, or
 ### Not available or not yet demonstrated
 
 - The bounded live scan and free direct collector are not a complete launch denominator or guaranteed archive backfill; watch mode is an operator process, not a durable hosted scheduler.
-- The broad launch cohort is large, but it lacks complete transaction paths and valid executable winner/loser labels, so it cannot by itself train or validate the intended model.
+- The broad launch cohort is large, but it lacks complete transaction paths and valid executable winner/loser labels, so it cannot by itself train or validate the intended profit model. It can support the narrower observer-confirmed-fast-graduation ranking study documented in `docs/12-fast-graduation-baseline.md`.
 - No matching validated model artifact or eligible shadow prediction currently exists, so the alert runner has nothing it may truthfully deliver.
 - No scheduler or current collector builds complete `execution_path` sequences across an outcome horizon; the manual materializer can label only qualifying paths that already exist in D1.
 - No forecast, feature importance, confidence interval, or profitability claim is shown as validated merely because its calculation code exists.

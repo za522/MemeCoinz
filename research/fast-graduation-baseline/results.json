@@ -1,0 +1,1894 @@
+{
+  "confirmed_fast_graduations": 1651,
+  "dataset": "RED-PUMP-2026-v1.4",
+  "feature_version": "fast-graduation-baseline-v1",
+  "generated_at": "2026-10-02T16:36:14.059023+00:00",
+  "label_warning": "TIMEOUT is right-censored after visibility loss. The target is confirmed fast graduation under the source observer, not true failure, 24-hour graduation, or profit.",
+  "models": {
+    "engineered_boosted": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 51.95157894736842,
+          "top_1pct_positives": 26,
+          "top_1pct_precision": 0.10526315789473684,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 61.05936379928315,
+          "top_1pct_positives": 33,
+          "top_1pct_precision": 0.13306451612903225,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 59.8484429065744,
+          "top_1pct_positives": 45,
+          "top_1pct_precision": 0.15570934256055363,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 45.873333333333335,
+          "top_1pct_positives": 23,
+          "top_1pct_precision": 0.1111111111111111,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 27,
+      "permutation_importance_average_precision": [
+        {
+          "feature": "log_initial_market_cap_sol",
+          "mean_ap_drop": 0.21227213739105677,
+          "std_ap_drop": 0.0005844448491816693
+        },
+        {
+          "feature": "social_link_count",
+          "mean_ap_drop": 0.09288252926560554,
+          "std_ap_drop": 0.013376880729479651
+        },
+        {
+          "feature": "log_description_length",
+          "mean_ap_drop": 0.0393642623643354,
+          "std_ap_drop": 0.012607798617782178
+        },
+        {
+          "feature": "log_name_reuse_prior_24h",
+          "mean_ap_drop": 0.018863800596835335,
+          "std_ap_drop": 0.03226829266909955
+        },
+        {
+          "feature": "metadata_completeness",
+          "mean_ap_drop": 0.013528999538678912,
+          "std_ap_drop": 0.004947154540111322
+        },
+        {
+          "feature": "log_launches_prior_1h",
+          "mean_ap_drop": 0.008445617310490974,
+          "std_ap_drop": 0.005652434784730271
+        },
+        {
+          "feature": "launch_hour_sin",
+          "mean_ap_drop": 0.008098001308490857,
+          "std_ap_drop": 0.002872085476203536
+        },
+        {
+          "feature": "log_symbol_reuse_prior_24h",
+          "mean_ap_drop": 0.0067002398652614885,
+          "std_ap_drop": 0.00952104521091878
+        },
+        {
+          "feature": "log_theme_momentum_ratio",
+          "mean_ap_drop": 0.006476395046506618,
+          "std_ap_drop": 0.0024182543115322938
+        },
+        {
+          "feature": "theme_politics",
+          "mean_ap_drop": 0.006311078244877422,
+          "std_ap_drop": 0.0001413684127366755
+        },
+        {
+          "feature": "log_theme_launches_prior_1h",
+          "mean_ap_drop": 0.0040854507315178186,
+          "std_ap_drop": 0.00629654898131222
+        },
+        {
+          "feature": "theme_celebrity",
+          "mean_ap_drop": 0.0024168792305497566,
+          "std_ap_drop": 0.005797824882548188
+        },
+        {
+          "feature": "has_telegram",
+          "mean_ap_drop": 0.000768611058536465,
+          "std_ap_drop": 0.000982707880908803
+        },
+        {
+          "feature": "has_website",
+          "mean_ap_drop": 0.0005619269265004964,
+          "std_ap_drop": 0.0005038308519239229
+        },
+        {
+          "feature": "log_launches_prior_5m",
+          "mean_ap_drop": 0.0004938079648423207,
+          "std_ap_drop": 0.0030437853329772836
+        },
+        {
+          "feature": "theme_other",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_internet",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_food",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_finance",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_animal",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_sports",
+          "mean_ap_drop": -0.00017877215789388612,
+          "std_ap_drop": 0.0002681431016115463
+        },
+        {
+          "feature": "theme_ai",
+          "mean_ap_drop": -0.001792533922728277,
+          "std_ap_drop": 7.606073923510163e-05
+        },
+        {
+          "feature": "has_x",
+          "mean_ap_drop": -0.0020049918416164916,
+          "std_ap_drop": 0.0016002202296482222
+        },
+        {
+          "feature": "theme_crypto",
+          "mean_ap_drop": -0.0045644004717563065,
+          "std_ap_drop": 0.0029929693545812726
+        },
+        {
+          "feature": "log_theme_launches_prior_24h",
+          "mean_ap_drop": -0.005437629590696658,
+          "std_ap_drop": 0.008833648865743362
+        },
+        {
+          "feature": "launch_hour_cos",
+          "mean_ap_drop": -0.006019637905701471,
+          "std_ap_drop": 0.0028229589118178243
+        },
+        {
+          "feature": "copy_pressure",
+          "mean_ap_drop": -0.006446146052602066,
+          "std_ap_drop": 0.0015353213336021124
+        }
+      ],
+      "test": {
+        "average_precision": 0.21821006100488635,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.8854098820292161,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 170.1783776630938,
+            "positives": 39,
+            "precision": 0.3939393939393939,
+            "precision_wilson_95": [
+              0.3033822252251093,
+              0.4924199712741269
+            ],
+            "recall": 0.1703056768558952,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 91.63451104935822,
+            "positives": 105,
+            "precision": 0.21212121212121213,
+            "precision_wilson_95": [
+              0.1783949421459383,
+              0.2502812535460447
+            ],
+            "recall": 0.4585152838427948,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 55.41706144413568,
+            "positives": 127,
+            "precision": 0.12828282828282828,
+            "precision_wilson_95": [
+              0.10887968487264418,
+              0.15055954110475897
+            ],
+            "recall": 0.5545851528384279,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 14.059145721945198,
+            "positives": 161,
+            "precision": 0.032544976753588035,
+            "precision_wilson_95": [
+              0.027951674941581107,
+              0.03786369433067805
+            ],
+            "recall": 0.7030567685589519,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 168.4765938864629,
+          "positives": 39,
+          "precision": 0.39,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.20193025142829762,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.8933172137039372,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 198.93415356573252,
+            "positives": 53,
+            "precision": 0.4015151515151515,
+            "precision_wilson_95": [
+              0.32181858217053533,
+              0.4867818243200997
+            ],
+            "recall": 0.19924812030075187,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 96.9865939507342,
+            "positives": 129,
+            "precision": 0.19575113808801214,
+            "precision_wilson_95": [
+              0.16725715321222226,
+              0.22777163585379948
+            ],
+            "recall": 0.4849624060150376,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 54.50796946843589,
+            "positives": 145,
+            "precision": 0.11001517450682853,
+            "precision_wilson_95": [
+              0.09424201303898484,
+              0.12805503844164456
+            ],
+            "recall": 0.5451127819548872,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 14.13448035871165,
+            "positives": 188,
+            "precision": 0.028528072837632777,
+            "precision_wilson_95": [
+              0.02477517998099084,
+              0.03283030859389349
+            ],
+            "recall": 0.706766917293233,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 213.0472180451128,
+          "positives": 43,
+          "precision": 0.43,
+          "rows": 100
+        }
+      }
+    },
+    "engineered_logistic": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 9.990688259109312,
+          "top_1pct_positives": 5,
+          "top_1pct_precision": 0.020242914979757085,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 9.251418757467144,
+          "top_1pct_positives": 5,
+          "top_1pct_precision": 0.020161290322580645,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 15.959584775086505,
+          "top_1pct_positives": 12,
+          "top_1pct_precision": 0.04152249134948097,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 11.966956521739132,
+          "top_1pct_positives": 6,
+          "top_1pct_precision": 0.028985507246376812,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 27,
+      "standardized_coefficients": [
+        {
+          "feature": "log_initial_market_cap_sol",
+          "standardized_coefficient": 1.8967093742193808
+        },
+        {
+          "feature": "log_theme_launches_prior_1h",
+          "standardized_coefficient": 1.0816771025081877
+        },
+        {
+          "feature": "theme_other",
+          "standardized_coefficient": -0.456520409971239
+        },
+        {
+          "feature": "log_theme_momentum_ratio",
+          "standardized_coefficient": -0.4538228417461138
+        },
+        {
+          "feature": "metadata_completeness",
+          "standardized_coefficient": 0.43889729409714656
+        },
+        {
+          "feature": "log_theme_launches_prior_24h",
+          "standardized_coefficient": -0.40216041223536536
+        },
+        {
+          "feature": "log_symbol_reuse_prior_24h",
+          "standardized_coefficient": -0.33722115212668713
+        },
+        {
+          "feature": "theme_celebrity",
+          "standardized_coefficient": 0.31980986531579625
+        },
+        {
+          "feature": "log_description_length",
+          "standardized_coefficient": -0.2532818007240126
+        },
+        {
+          "feature": "has_telegram",
+          "standardized_coefficient": 0.25190622172336385
+        },
+        {
+          "feature": "theme_politics",
+          "standardized_coefficient": 0.2321082192286655
+        },
+        {
+          "feature": "theme_sports",
+          "standardized_coefficient": 0.20140382603582943
+        },
+        {
+          "feature": "log_name_reuse_prior_24h",
+          "standardized_coefficient": 0.20036738761877557
+        },
+        {
+          "feature": "log_launches_prior_5m",
+          "standardized_coefficient": -0.1992367127162891
+        },
+        {
+          "feature": "has_website",
+          "standardized_coefficient": -0.18462714073013908
+        },
+        {
+          "feature": "theme_internet",
+          "standardized_coefficient": 0.15497737985852814
+        },
+        {
+          "feature": "theme_finance",
+          "standardized_coefficient": 0.1545448907861822
+        },
+        {
+          "feature": "theme_food",
+          "standardized_coefficient": 0.1226373032441647
+        },
+        {
+          "feature": "theme_animal",
+          "standardized_coefficient": 0.09090209669688679
+        },
+        {
+          "feature": "theme_ai",
+          "standardized_coefficient": 0.08756444843254498
+        },
+        {
+          "feature": "launch_hour_sin",
+          "standardized_coefficient": 0.08624764616635576
+        },
+        {
+          "feature": "social_link_count",
+          "standardized_coefficient": -0.06218323012734107
+        },
+        {
+          "feature": "theme_crypto",
+          "standardized_coefficient": 0.04798522027923466
+        },
+        {
+          "feature": "copy_pressure",
+          "standardized_coefficient": 0.034839860705331425
+        },
+        {
+          "feature": "launch_hour_cos",
+          "standardized_coefficient": -0.020511032534094132
+        },
+        {
+          "feature": "log_launches_prior_1h",
+          "standardized_coefficient": 0.016295511175066127
+        },
+        {
+          "feature": "has_x",
+          "standardized_coefficient": -0.0018094954156716045
+        }
+      ],
+      "test": {
+        "average_precision": 0.02573904428235772,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.8456492021166807,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.03735321206782739
+            ],
+            "recall": 0.0,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 8.72709629041507,
+            "positives": 10,
+            "precision": 0.020202020202020204,
+            "precision_wilson_95": [
+              0.011009638483399179,
+              0.036784021003239055
+            ],
+            "recall": 0.043668122270742356,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 12.65428962110185,
+            "positives": 29,
+            "precision": 0.029292929292929294,
+            "precision_wilson_95": [
+              0.020471920886040967,
+              0.04175275113969244
+            ],
+            "recall": 0.12663755458515283,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 12.923935197812977,
+            "positives": 148,
+            "precision": 0.029917121487770367,
+            "precision_wilson_95": [
+              0.025522470355464587,
+              0.03504126639810888
+            ],
+            "recall": 0.6462882096069869,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.02952202587585863,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.8591021026861209,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.02827898679860847
+            ],
+            "recall": 0.0,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 12.029344986137575,
+            "positives": 16,
+            "precision": 0.024279210925644917,
+            "precision_wilson_95": [
+              0.014999048730192654,
+              0.039073397016429895
+            ],
+            "recall": 0.06015037593984962,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 19.17176857165676,
+            "positives": 51,
+            "precision": 0.038694992412746584,
+            "precision_wilson_95": [
+              0.029552336835996083,
+              0.05051888359245272
+            ],
+            "recall": 0.19172932330827067,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 13.307462890914692,
+            "positives": 177,
+            "precision": 0.02685887708649469,
+            "precision_wilson_95": [
+              0.023222587270093957,
+              0.03104645469208478
+            ],
+            "recall": 0.6654135338345865,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      }
+    },
+    "engineered_no_market_cap_boosted": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 5.994412955465587,
+          "top_1pct_positives": 3,
+          "top_1pct_precision": 0.012145748987854251,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 24.053688769414574,
+          "top_1pct_positives": 13,
+          "top_1pct_precision": 0.05241935483870968,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 17.289550173010383,
+          "top_1pct_positives": 13,
+          "top_1pct_precision": 0.04498269896193772,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 21.939420289855075,
+          "top_1pct_positives": 11,
+          "top_1pct_precision": 0.05314009661835749,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 26,
+      "permutation_importance_average_precision": [
+        {
+          "feature": "log_description_length",
+          "mean_ap_drop": 0.016557547070913326,
+          "std_ap_drop": 0.0007006405637001148
+        },
+        {
+          "feature": "has_telegram",
+          "mean_ap_drop": 0.009600388613563495,
+          "std_ap_drop": 0.0024648094322431455
+        },
+        {
+          "feature": "social_link_count",
+          "mean_ap_drop": 0.00927450718004171,
+          "std_ap_drop": 0.004228099509654854
+        },
+        {
+          "feature": "log_name_reuse_prior_24h",
+          "mean_ap_drop": 0.008484567461871161,
+          "std_ap_drop": 0.002956155468190092
+        },
+        {
+          "feature": "has_x",
+          "mean_ap_drop": 0.006215818073178587,
+          "std_ap_drop": 0.0031484714001375302
+        },
+        {
+          "feature": "metadata_completeness",
+          "mean_ap_drop": 0.005801428380689166,
+          "std_ap_drop": 0.0001340341987958353
+        },
+        {
+          "feature": "launch_hour_sin",
+          "mean_ap_drop": 0.002572634354127618,
+          "std_ap_drop": 0.0002012427955808892
+        },
+        {
+          "feature": "log_symbol_reuse_prior_24h",
+          "mean_ap_drop": 0.002171716128863962,
+          "std_ap_drop": 0.0037561533032478165
+        },
+        {
+          "feature": "copy_pressure",
+          "mean_ap_drop": 0.0021114623941696996,
+          "std_ap_drop": 0.00039964911413401547
+        },
+        {
+          "feature": "log_launches_prior_5m",
+          "mean_ap_drop": 0.0018095243828709859,
+          "std_ap_drop": 0.0018569810227020806
+        },
+        {
+          "feature": "launch_hour_cos",
+          "mean_ap_drop": 0.0017055389777624653,
+          "std_ap_drop": 0.0013410692449370692
+        },
+        {
+          "feature": "theme_politics",
+          "mean_ap_drop": 0.0006497006680471692,
+          "std_ap_drop": 0.00030145328248424176
+        },
+        {
+          "feature": "theme_celebrity",
+          "mean_ap_drop": 0.0005468797954290006,
+          "std_ap_drop": 0.00021737945242687653
+        },
+        {
+          "feature": "theme_ai",
+          "mean_ap_drop": 0.00042201855872297037,
+          "std_ap_drop": 2.9751604773274198e-05
+        },
+        {
+          "feature": "has_website",
+          "mean_ap_drop": 0.00010587088003457164,
+          "std_ap_drop": 7.444951934625318e-05
+        },
+        {
+          "feature": "theme_animal",
+          "mean_ap_drop": 3.795141472065153e-05,
+          "std_ap_drop": 1.99299167496844e-05
+        },
+        {
+          "feature": "theme_crypto",
+          "mean_ap_drop": 6.811187111420193e-06,
+          "std_ap_drop": 0.00022749305776148594
+        },
+        {
+          "feature": "theme_other",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_food",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_finance",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_sports",
+          "mean_ap_drop": 0.0,
+          "std_ap_drop": 0.0
+        },
+        {
+          "feature": "theme_internet",
+          "mean_ap_drop": -8.247577882949247e-06,
+          "std_ap_drop": 9.029002371192426e-06
+        },
+        {
+          "feature": "log_launches_prior_1h",
+          "mean_ap_drop": -0.0007202572144967764,
+          "std_ap_drop": 0.004051675083422993
+        },
+        {
+          "feature": "log_theme_momentum_ratio",
+          "mean_ap_drop": -0.0016693297159965138,
+          "std_ap_drop": 0.001186744593905636
+        },
+        {
+          "feature": "log_theme_launches_prior_1h",
+          "mean_ap_drop": -0.0018092518071127401,
+          "std_ap_drop": 0.0011587199773450492
+        },
+        {
+          "feature": "log_theme_launches_prior_24h",
+          "mean_ap_drop": -0.005987860330066853,
+          "std_ap_drop": 0.002640161545829447
+        }
+      ],
+      "test": {
+        "average_precision": 0.01975590988716959,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.7184731461422688,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 34.90838516166028,
+            "positives": 8,
+            "precision": 0.08080808080808081,
+            "precision_wilson_95": [
+              0.041514402502911794,
+              0.15141808842264048
+            ],
+            "recall": 0.034934497816593885,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 23.563159984120684,
+            "positives": 27,
+            "precision": 0.05454545454545454,
+            "precision_wilson_95": [
+              0.03775458245991865,
+              0.0781970045582023
+            ],
+            "recall": 0.11790393013100436,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 17.45419258083014,
+            "positives": 40,
+            "precision": 0.04040404040404041,
+            "precision_wilson_95": [
+              0.02981045252234462,
+              0.054550546987759886
+            ],
+            "recall": 0.17467248908296942,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 6.28731982596307,
+            "positives": 72,
+            "precision": 0.014554275318374773,
+            "precision_wilson_95": [
+              0.01157378954635972,
+              0.01828809555951285
+            ],
+            "recall": 0.314410480349345,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 34.55930131004367,
+          "positives": 8,
+          "precision": 0.08,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.013828725135989236,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.7204195110969798,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 30.02779676463887,
+            "positives": 8,
+            "precision": 0.06060606060606061,
+            "precision_wilson_95": [
+              0.031026884470063118,
+              0.11503646756507767
+            ],
+            "recall": 0.03007518796992481,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 21.051353725740757,
+            "positives": 28,
+            "precision": 0.042488619119878605,
+            "precision_wilson_95": [
+              0.029557794179031087,
+              0.060722404840448004
+            ],
+            "recall": 0.10526315789473684,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 16.164432325122366,
+            "positives": 43,
+            "precision": 0.032625189681335355,
+            "precision_wilson_95": [
+              0.024310547555085764,
+              0.04365634682636895
+            ],
+            "recall": 0.16165413533834586,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 6.089855899232147,
+            "positives": 81,
+            "precision": 0.012291350531107739,
+            "precision_wilson_95": [
+              0.009900888726249397,
+              0.015250073706862363
+            ],
+            "recall": 0.30451127819548873,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 39.63669172932331,
+          "positives": 8,
+          "precision": 0.08,
+          "rows": 100
+        }
+      }
+    },
+    "engineered_no_market_cap_logistic": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 7.992550607287449,
+          "top_1pct_positives": 4,
+          "top_1pct_precision": 0.016194331983805668,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 12.951986260454001,
+          "top_1pct_positives": 7,
+          "top_1pct_precision": 0.028225806451612902,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 15.959584775086505,
+          "top_1pct_positives": 12,
+          "top_1pct_precision": 0.04152249134948097,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 13.961449275362318,
+          "top_1pct_positives": 7,
+          "top_1pct_precision": 0.033816425120772944,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 26,
+      "standardized_coefficients": [
+        {
+          "feature": "log_theme_launches_prior_1h",
+          "standardized_coefficient": 0.8140394976065368
+        },
+        {
+          "feature": "log_symbol_reuse_prior_24h",
+          "standardized_coefficient": -0.4439758480404523
+        },
+        {
+          "feature": "log_theme_launches_prior_24h",
+          "standardized_coefficient": -0.39880233765546225
+        },
+        {
+          "feature": "metadata_completeness",
+          "standardized_coefficient": 0.3597708708033716
+        },
+        {
+          "feature": "log_theme_momentum_ratio",
+          "standardized_coefficient": -0.3237373369735724
+        },
+        {
+          "feature": "theme_other",
+          "standardized_coefficient": -0.26732238981528855
+        },
+        {
+          "feature": "log_name_reuse_prior_24h",
+          "standardized_coefficient": 0.24959816159173115
+        },
+        {
+          "feature": "has_telegram",
+          "standardized_coefficient": 0.23938587286172947
+        },
+        {
+          "feature": "theme_celebrity",
+          "standardized_coefficient": 0.2044730308449919
+        },
+        {
+          "feature": "log_launches_prior_5m",
+          "standardized_coefficient": -0.18554758143056838
+        },
+        {
+          "feature": "log_description_length",
+          "standardized_coefficient": -0.1765906958094992
+        },
+        {
+          "feature": "theme_politics",
+          "standardized_coefficient": 0.15087484282929098
+        },
+        {
+          "feature": "theme_internet",
+          "standardized_coefficient": 0.1313489080188911
+        },
+        {
+          "feature": "theme_finance",
+          "standardized_coefficient": 0.12140142794354632
+        },
+        {
+          "feature": "theme_sports",
+          "standardized_coefficient": 0.11583295345232617
+        },
+        {
+          "feature": "theme_food",
+          "standardized_coefficient": 0.07898797059982232
+        },
+        {
+          "feature": "has_website",
+          "standardized_coefficient": -0.061744036232015284
+        },
+        {
+          "feature": "theme_animal",
+          "standardized_coefficient": 0.05398010109722366
+        },
+        {
+          "feature": "launch_hour_cos",
+          "standardized_coefficient": -0.045361725546593214
+        },
+        {
+          "feature": "has_x",
+          "standardized_coefficient": 0.04179629849866525
+        },
+        {
+          "feature": "copy_pressure",
+          "standardized_coefficient": 0.03769603565884896
+        },
+        {
+          "feature": "social_link_count",
+          "standardized_coefficient": 0.03192476296048572
+        },
+        {
+          "feature": "theme_crypto",
+          "standardized_coefficient": 0.018025377493137377
+        },
+        {
+          "feature": "launch_hour_sin",
+          "standardized_coefficient": -0.01775681849985133
+        },
+        {
+          "feature": "theme_ai",
+          "standardized_coefficient": -0.013248679036829077
+        },
+        {
+          "feature": "log_launches_prior_1h",
+          "standardized_coefficient": 0.00976601218025434
+        }
+      ],
+      "test": {
+        "average_precision": 0.009456278057996021,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.6721531334953837,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.03735321206782739
+            ],
+            "recall": 0.0,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 14.836063693705615,
+            "positives": 17,
+            "precision": 0.03434343434343434,
+            "precision_wilson_95": [
+              0.021551111744276076,
+              0.054307576725913874
+            ],
+            "recall": 0.07423580786026202,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 11.781579992060342,
+            "positives": 27,
+            "precision": 0.02727272727272727,
+            "precision_wilson_95": [
+              0.018810142029254705,
+              0.0393897431811385
+            ],
+            "recall": 0.11790393013100436,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 4.802813755944012,
+            "positives": 55,
+            "precision": 0.011117849201536285,
+            "precision_wilson_95": [
+              0.008551923757757172,
+              0.01444244190060336
+            ],
+            "recall": 0.24017467248908297,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.007432458431439095,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.6347746618953753,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 15.013898382319436,
+            "positives": 4,
+            "precision": 0.030303030303030304,
+            "precision_wilson_95": [
+              0.011846060497606614,
+              0.07532510891926801
+            ],
+            "recall": 0.015037593984962405,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 14.28484717103837,
+            "positives": 19,
+            "precision": 0.028831562974203338,
+            "precision_wilson_95": [
+              0.018534127889936015,
+              0.04459025617490067
+            ],
+            "recall": 0.07142857142857142,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 10.901593893687178,
+            "positives": 29,
+            "precision": 0.022003034901365705,
+            "precision_wilson_95": [
+              0.015363048982451432,
+              0.031421274816763614
+            ],
+            "recall": 0.10902255639097744,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 4.36063755747487,
+            "positives": 58,
+            "precision": 0.008801213960546282,
+            "precision_wilson_95": [
+              0.006814890689723158,
+              0.011359865189549637
+            ],
+            "recall": 0.21804511278195488,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 19.818345864661655,
+          "positives": 4,
+          "precision": 0.04,
+          "rows": 100
+        }
+      }
+    },
+    "market_cap_rank_only": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 0.0,
+          "top_1pct_positives": 0,
+          "top_1pct_precision": 0.0,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 0.0,
+          "top_1pct_positives": 0,
+          "top_1pct_precision": 0.0,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 7.979792387543252,
+          "top_1pct_positives": 6,
+          "top_1pct_precision": 0.020761245674740483,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 7.977971014492754,
+          "top_1pct_positives": 4,
+          "top_1pct_precision": 0.01932367149758454,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 1,
+      "test": {
+        "average_precision": 0.024002459912454407,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.8063822701503649,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.03735321206782739
+            ],
+            "recall": 0.0,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.007700760938707215
+            ],
+            "recall": 0.0,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.003865263203300507
+            ],
+            "recall": 0.0,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 13.185906857228103,
+            "positives": 151,
+            "precision": 0.03052354962603598,
+            "precision_wilson_95": [
+              0.0260822431076577,
+              0.03569340884253553
+            ],
+            "recall": 0.6593886462882096,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.026940962727192798,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.8294348217151152,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.02827898679860847
+            ],
+            "recall": 0.0,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.005795441382813808
+            ],
+            "recall": 0.0,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 13.533013109404772,
+            "positives": 36,
+            "precision": 0.027314112291350532,
+            "precision_wilson_95": [
+              0.019794123772302982,
+              0.0375814853180319
+            ],
+            "recall": 0.13533834586466165,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 13.683379921731492,
+            "positives": 182,
+            "precision": 0.027617602427921092,
+            "precision_wilson_95": [
+              0.023927842446325957,
+              0.031857766157991685
+            ],
+            "recall": 0.6842105263157895,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      }
+    },
+    "metadata_boosted": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 51.95157894736842,
+          "top_1pct_positives": 26,
+          "top_1pct_precision": 0.10526315789473684,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 57.35879629629629,
+          "top_1pct_positives": 31,
+          "top_1pct_precision": 0.125,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 59.8484429065744,
+          "top_1pct_positives": 45,
+          "top_1pct_precision": 0.15570934256055363,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 43.87884057971015,
+          "top_1pct_positives": 22,
+          "top_1pct_precision": 0.10628019323671498,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 7,
+      "permutation_importance_average_precision": [
+        {
+          "feature": "log_initial_market_cap_sol",
+          "mean_ap_drop": 0.21306316890428012,
+          "std_ap_drop": 0.000357103481110424
+        },
+        {
+          "feature": "has_x",
+          "mean_ap_drop": 0.10455591041377645,
+          "std_ap_drop": 0.0012641604536923871
+        },
+        {
+          "feature": "log_description_length",
+          "mean_ap_drop": 0.07911088854994802,
+          "std_ap_drop": 0.009243894210669948
+        },
+        {
+          "feature": "has_telegram",
+          "mean_ap_drop": 0.025705085256932953,
+          "std_ap_drop": 0.0016885352962015827
+        },
+        {
+          "feature": "has_website",
+          "mean_ap_drop": 0.0033951151765600116,
+          "std_ap_drop": 0.002849729091588846
+        },
+        {
+          "feature": "launch_hour_cos",
+          "mean_ap_drop": -0.0006387534650958518,
+          "std_ap_drop": 0.008045726662403095
+        },
+        {
+          "feature": "launch_hour_sin",
+          "mean_ap_drop": -0.0034278388547578087,
+          "std_ap_drop": 0.0037237864909452196
+        }
+      ],
+      "test": {
+        "average_precision": 0.2020319226415208,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.8978405213822571,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 165.8148295178863,
+            "positives": 38,
+            "precision": 0.3838383838383838,
+            "precision_wilson_95": [
+              0.2940864603561134,
+              0.4822683262859071
+            ],
+            "recall": 0.16593886462882096,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 85.52554364606767,
+            "positives": 98,
+            "precision": 0.19797979797979798,
+            "precision_wilson_95": [
+              0.16526039333265324,
+              0.23535077337577798
+            ],
+            "recall": 0.4279475982532751,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 54.10799700057343,
+            "positives": 124,
+            "precision": 0.12525252525252525,
+            "precision_wilson_95": [
+              0.10607111451165693,
+              0.14733093124273597
+            ],
+            "recall": 0.5414847161572053,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 14.059145721945198,
+            "positives": 161,
+            "precision": 0.032544976753588035,
+            "precision_wilson_95": [
+              0.027951674941581107,
+              0.03786369433067805
+            ],
+            "recall": 0.7030567685589519,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 164.15668122270745,
+          "positives": 38,
+          "precision": 0.38,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.17805639928346942,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.9081231144555426,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 172.65983139667352,
+            "positives": 46,
+            "precision": 0.3484848484848485,
+            "precision_wilson_95": [
+              0.27252673004942124,
+              0.43301235685924816
+            ],
+            "recall": 0.17293233082706766,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 95.48292582746701,
+            "positives": 127,
+            "precision": 0.19271623672230653,
+            "precision_wilson_95": [
+              0.16441707195854557,
+              0.2245770915620001
+            ],
+            "recall": 0.4774436090225564,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 54.13205243761909,
+            "positives": 144,
+            "precision": 0.10925644916540213,
+            "precision_wilson_95": [
+              0.09353633281532593,
+              0.12724767790942926
+            ],
+            "recall": 0.5413533834586466,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 14.28484717103837,
+            "positives": 190,
+            "precision": 0.028831562974203338,
+            "precision_wilson_95": [
+              0.02505786744770022,
+              0.033154247784039664
+            ],
+            "recall": 0.7142857142857143,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 168.4559398496241,
+          "positives": 34,
+          "precision": 0.34,
+          "rows": 100
+        }
+      }
+    },
+    "metadata_logistic": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 9.990688259109312,
+          "top_1pct_positives": 5,
+          "top_1pct_precision": 0.020242914979757085,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 9.251418757467144,
+          "top_1pct_positives": 5,
+          "top_1pct_precision": 0.020161290322580645,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 11.969688581314879,
+          "top_1pct_positives": 9,
+          "top_1pct_precision": 0.031141868512110725,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 13.961449275362318,
+          "top_1pct_positives": 7,
+          "top_1pct_precision": 0.033816425120772944,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 7,
+      "standardized_coefficients": [
+        {
+          "feature": "log_initial_market_cap_sol",
+          "standardized_coefficient": 1.880124024459178
+        },
+        {
+          "feature": "has_telegram",
+          "standardized_coefficient": 0.322446865857211
+        },
+        {
+          "feature": "launch_hour_sin",
+          "standardized_coefficient": 0.24373955452410564
+        },
+        {
+          "feature": "has_website",
+          "standardized_coefficient": -0.08557240005225589
+        },
+        {
+          "feature": "has_x",
+          "standardized_coefficient": 0.08239319069398447
+        },
+        {
+          "feature": "launch_hour_cos",
+          "standardized_coefficient": -0.07821082263139248
+        },
+        {
+          "feature": "log_description_length",
+          "standardized_coefficient": 0.02132536957468734
+        }
+      ],
+      "test": {
+        "average_precision": 0.024676196812513446,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.8382005302010967,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.03735321206782739
+            ],
+            "recall": 0.0,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 7.854386661373561,
+            "positives": 9,
+            "precision": 0.01818181818181818,
+            "precision_wilson_95": [
+              0.009594422836063926,
+              0.03418994679578121
+            ],
+            "recall": 0.039301310043668124,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 11.781579992060342,
+            "positives": 27,
+            "precision": 0.02727272727272727,
+            "precision_wilson_95": [
+              0.018810142029254705,
+              0.0393897431811385
+            ],
+            "recall": 0.11790393013100436,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 13.011259084284685,
+            "positives": 149,
+            "precision": 0.03011926420052557,
+            "precision_wilson_95": [
+              0.025709005001591276,
+              0.035258703484188775
+            ],
+            "recall": 0.6506550218340611,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.028479903114757458,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.8525830079738372,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 0.0,
+            "positives": 0,
+            "precision": 0.0,
+            "precision_wilson_95": [
+              0.0,
+              0.02827898679860847
+            ],
+            "recall": 0.0,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 12.029344986137575,
+            "positives": 16,
+            "precision": 0.024279210925644917,
+            "precision_wilson_95": [
+              0.014999048730192654,
+              0.039073397016429895
+            ],
+            "recall": 0.06015037593984962,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 14.66076420185517,
+            "positives": 39,
+            "precision": 0.02959028831562974,
+            "precision_wilson_95": [
+              0.021720596661109544,
+              0.04019413469684811
+            ],
+            "recall": 0.14661654135338345,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 13.232279484751333,
+            "positives": 176,
+            "precision": 0.026707132018209408,
+            "precision_wilson_95": [
+              0.02308163303880115,
+              0.0308840955949498
+            ],
+            "recall": 0.6616541353383458,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 0.0,
+          "positives": 0,
+          "precision": 0.0,
+          "rows": 100
+        }
+      }
+    },
+    "metadata_no_market_cap_boosted": {
+      "daily_test_top_1pct": [
+        {
+          "day": "2026-06-06",
+          "positives": 50,
+          "prevalence": 0.002026178222636463,
+          "rows": 24677,
+          "top_1pct_lift": 7.992550607287449,
+          "top_1pct_positives": 4,
+          "top_1pct_precision": 0.016194331983805668,
+          "top_1pct_rows": 247
+        },
+        {
+          "day": "2026-06-07",
+          "positives": 54,
+          "prevalence": 0.0021792646999475363,
+          "rows": 24779,
+          "top_1pct_lift": 20.353121266427717,
+          "top_1pct_positives": 11,
+          "top_1pct_precision": 0.04435483870967742,
+          "top_1pct_rows": 248
+        },
+        {
+          "day": "2026-06-08",
+          "positives": 75,
+          "prevalence": 0.0026017275470912684,
+          "rows": 28827,
+          "top_1pct_lift": 15.959584775086505,
+          "top_1pct_positives": 12,
+          "top_1pct_precision": 0.04152249134948097,
+          "top_1pct_rows": 289
+        },
+        {
+          "day": "2026-06-09",
+          "positives": 50,
+          "prevalence": 0.002422128566584314,
+          "rows": 20643,
+          "top_1pct_lift": 13.961449275362318,
+          "top_1pct_positives": 7,
+          "top_1pct_precision": 0.033816425120772944,
+          "top_1pct_rows": 207
+        }
+      ],
+      "feature_count": 6,
+      "test": {
+        "average_precision": 0.013845694621431513,
+        "positives": 229,
+        "prevalence": 0.002314861613731476,
+        "roc_auc": 0.6920223127437851,
+        "rows": 98926,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 21.81774072603767,
+            "positives": 5,
+            "precision": 0.050505050505050504,
+            "precision_wilson_95": [
+              0.021763234491416872,
+              0.11282702686248858
+            ],
+            "recall": 0.021834061135371178,
+            "rows": 99
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 16.58148295178863,
+            "positives": 19,
+            "precision": 0.03838383838383838,
+            "precision_wilson_95": [
+              0.024708554054314234,
+              0.05916871412546191
+            ],
+            "recall": 0.08296943231441048,
+            "rows": 495
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 14.836063693705615,
+            "positives": 34,
+            "precision": 0.03434343434343434,
+            "precision_wilson_95": [
+              0.024679156587711634,
+              0.047607482476372254
+            ],
+            "recall": 0.14847161572052403,
+            "rows": 990
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 6.461967598906488,
+            "positives": 74,
+            "precision": 0.014958560743885184,
+            "precision_wilson_95": [
+              0.011932756820127288,
+              0.018737071750158468
+            ],
+            "recall": 0.3231441048034934,
+            "rows": 4947
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 21.599563318777296,
+          "positives": 5,
+          "precision": 0.05,
+          "rows": 100
+        }
+      },
+      "validation": {
+        "average_precision": 0.01017014984452093,
+        "positives": 266,
+        "prevalence": 0.002018331916960058,
+        "roc_auc": 0.7235892294487873,
+        "rows": 131792,
+        "top": {
+          "0.001": {
+            "lift_over_test_prevalence": 18.767372977899296,
+            "positives": 5,
+            "precision": 0.03787878787878788,
+            "precision_wilson_95": [
+              0.016286179128381463,
+              0.08560803594305971
+            ],
+            "recall": 0.018796992481203006,
+            "rows": 132
+          },
+          "0.005": {
+            "lift_over_test_prevalence": 17.292183417572765,
+            "positives": 23,
+            "precision": 0.03490136570561457,
+            "precision_wilson_95": [
+              0.02336745280304876,
+              0.0518261823527401
+            ],
+            "recall": 0.08646616541353383,
+            "rows": 659
+          },
+          "0.010": {
+            "lift_over_test_prevalence": 12.029344986137575,
+            "positives": 32,
+            "precision": 0.024279210925644917,
+            "precision_wilson_95": [
+              0.017250001531347654,
+              0.034073444535490174
+            ],
+            "recall": 0.12030075187969924,
+            "rows": 1318
+          },
+          "0.050": {
+            "lift_over_test_prevalence": 5.03728821294511,
+            "positives": 67,
+            "precision": 0.010166919575113809,
+            "precision_wilson_95": [
+              0.008014196764755243,
+              0.012890379070367584
+            ],
+            "recall": 0.2518796992481203,
+            "rows": 6590
+          }
+        },
+        "top_100": {
+          "lift_over_test_prevalence": 19.818345864661655,
+          "positives": 4,
+          "precision": 0.04,
+          "rows": 100
+        }
+      }
+    }
+  },
+  "operational_labelled_rows": 832941,
+  "source_hashes": {
+    "red_pump_2026_v1_launches.jsonl.gz": "042940379e8c897ac97403e6b25a5b302fb32b6902a8fc0cef4ab70ac11e8f84",
+    "red_pump_2026_v1_outcomes.csv.gz": "c0a327ea442d91c6f970b2bad9a2a9b778e163d8c3eb38f71eccd3e92209a974"
+  },
+  "splits": {
+    "test": {
+      "end": "2026-06-09T23:34:14.905000+00:00",
+      "positives": 229,
+      "prevalence": 0.002314861613731476,
+      "rows": 98926,
+      "start": "2026-06-06T00:00:06.153000+00:00"
+    },
+    "train": {
+      "end": "2026-05-31T23:59:26.378000+00:00",
+      "positives": 1088,
+      "prevalence": 0.002043679901121958,
+      "rows": 532373,
+      "start": "2026-05-12T00:00:54.128000+00:00"
+    },
+    "validation": {
+      "end": "2026-06-05T23:59:03.598000+00:00",
+      "positives": 266,
+      "prevalence": 0.002018331916960058,
+      "rows": 131792,
+      "start": "2026-06-01T00:00:26.453000+00:00"
+    }
+  },
+  "unique_launches": 860194
+}

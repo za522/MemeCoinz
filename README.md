@@ -26,6 +26,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 - A protected, idempotent importer for the corrected CC-BY-4.0 RED-PUMP-2026-v1 corpus: 860,194 unique launches, immutable source files in R2, and a compact browseable D1 index with censored outcomes kept distinct from losses.
 - Chronology-safe metadata/narrative features materialized for all 860,194 cohort rows, including theme, novelty, copy pressure, launch-rate context, name/symbol reuse, social-link count, metadata completeness, and observation lag.
 - Descriptive cohort associations for every calculated feature family, reported as confirmed-fast-graduation lower bounds with censored/unknown launches retained in the denominator.
+- A reproducible offline RED-PUMP baseline that trains on May 12–31, validates on June 1–5, and tests once on June 6–9. It finds out-of-time ranking signal for **observer-confirmed very-fast graduation**, including a market-cap-free engineered model whose top 1% contained 40 confirmed events among 990 launches versus 0.231% across the test set. This is a candidate research result, not an app forecast or profit model.
 - Idempotent protected upload paths for the cohort rows, all calculated feature rows, and the 60 precomputed descriptive association buckets, so a deployed D1 can reproduce the verified local research layer without bundling the dataset into application source.
 - A free direct collector (`npm run collect:free`) that scans official Pump activity through public Solana RPC, decodes only exact official instructions, enriches confirmed mints through public DEX Screener/Jupiter reads, checkpoints progress, persists bounded evidence, and can repeat in watch mode.
 - Server-only source registry and exact source/rights documentation.
@@ -36,7 +37,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 - DEX Screener latest profiles are a paid-profile, selection-biased fallback rather than all Pump launches.
 - Browser-direct fallback rows are current and real but are not written to D1; refreshing or opening the same mint later does not create historical coverage.
 - The RED-PUMP corpus is a broad launch cohort, but its rolling top-50 observer loses most launches after roughly 2.77 minutes. It confirms 1,651 fast graduations; its 831,290 `TIMEOUT` rows are right-censored, not failures, and cannot train the intended profit model as negative labels.
-- No complete transaction-level historical cohort with mature executable outcomes has been established, and no model is currently demonstrated as trained or validated.
+- No complete transaction-level historical cohort with mature executable profit outcomes has been established. One offline model is now trained and evaluated for the narrower observer-confirmed-fast-graduation target; it is not validated for serving, integrated into the app, calibrated as a probability, or evidence of trading profitability.
 - No scheduler or current collector builds full `execution_path` sequences over the outcome horizon, so the manual materializer does not by itself create a usable cohort.
 - No Helius, Solana Tracker, X, or production Jupiter credential is installed in the current local environment.
 - The credentialed collector code therefore has no Helius/Tracker/X local corpus or verified provider coverage. The free collector has persisted a small real public-source corpus, but that does not imply paid-provider coverage or a complete cohort.
@@ -62,7 +63,11 @@ To begin free live plus best-effort archive collection after configuring `BACKFI
 npm run collect:free -- --mode both --watch
 ```
 
-The collector writes a checkpoint under `.research/`, never calls metered providers, and never signs or submits a trade. Stop it with `Ctrl+C`.
+The collector writes a checkpoint under `.research/`, never calls metered providers, and never signs or submits a trade. It collects only while that operator process is running. Stop it with `Ctrl+C`.
+
+## Offline fast-graduation baseline
+
+The completed experiment, exact metrics, source hashes, and limitations are in [docs/12-fast-graduation-baseline.md](docs/12-fast-graduation-baseline.md). The executable study is `scripts/train_fast_graduation_baseline.py`; machine-readable outputs are under `research/fast-graduation-baseline/`.
 
 ## Server configuration
 

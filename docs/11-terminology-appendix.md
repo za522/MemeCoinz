@@ -338,6 +338,14 @@ Short, plain-English definitions for terms used in the app and research handbook
 
 **PR-AUC:** Area under the precision-recall curve, which summarizes ranking quality across thresholds and is useful when successful launches are rare. Higher is better, but it says nothing by itself about execution costs.
 
+**Average precision (AP):** The weighted average of precision across recall levels. It is the implementation used for the baseline's precision-recall summary; with rare outcomes, compare it with the outcome's base rate rather than reading it like ordinary accuracy.
+
+**Lift:** How many times more common an outcome is in a selected group than in the full comparison population. A 17x lift can still mean only 4% of selected launches achieve the event when the base rate is very low.
+
+**Right-censored:** The observer stopped following a case before its eventual outcome was known. Right-censored does not mean failure; it means the later result is missing.
+
+**Wilson interval:** A confidence interval for a measured proportion such as precision. It communicates sampling uncertainty around the observed rate, not every possible source of bias.
+
 **Opportunity:** The estimated probability or ranking of one precisely defined future outcome. It remains separate from integrity risk, executability, and evidence confidence.
 
 **Purging:** Removing training cases whose feature or outcome windows overlap a test period, preventing information from crossing the boundary.

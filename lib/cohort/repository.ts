@@ -331,7 +331,6 @@ export async function finalizeCohortImport(now = new Date().toISOString()): Prom
     right_censored: number;
     without_outcome: number;
   }>();
-  const manifest = await readCohortStatus();
   const actual = {
     launches: Number(counts?.launches ?? 0),
     confirmedFastGraduations: Number(counts?.confirmed_fast ?? 0),
