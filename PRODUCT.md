@@ -2,7 +2,7 @@
 name: "MemeTrace"
 description: "A point-in-time research app for discovering Solana memecoin launches, comparing their evidence, and testing whether early information predicts executable outcomes."
 register: "product"
-updated: "2026-08-29"
+updated: "2026-10-05"
 ---
 
 # Product
@@ -30,6 +30,8 @@ The product combines a real launch feed, an evidence report for one exact mint, 
 The first broad historical launch index is the corrected RED-PUMP-2026-v1 corpus (860,194 unique Pump launches observed from 8 May to 10 June 2026). Every row now has a chronology-safe metadata/narrative feature record and the app reports descriptive feature associations against confirmed fast graduation. This is useful research evidence, but not a profitability label: its `TIMEOUT` rows are right-censored after a short rolling-feed visibility window and must never be treated as failed or unprofitable coins.
 
 An offline candidate baseline now tests the narrower operational question with a chronological holdout. It ranks observer-confirmed very-fast graduations above the test-set base rate, including after first-observed market cap is removed. It remains separate from the app's serving pipeline: the scores are uncalibrated ranks, the label is not profit, and no live alert or trade may use this artifact.
+
+An offline Robinhood Chain paper-copy experiment now collects Fomopulse-roster wallet history and reconstructs pool events for conditional delayed-copy scenarios. It compares simple copying, unusually large purchases and distinct-wallet convergence across earlier/later periods, with size-specific pool math, explicit cost assumptions and rejected/missing outcomes. This separate experiment does not alter the app screens or provide certified executable profit labels, a validated prediction model, or a continuously running hosted monitor. Its actual run coverage is recorded in each saved `REPORT.md`; methodology is in `docs/13-paper-copy-backtest.md`.
 
 ## Screen map
 

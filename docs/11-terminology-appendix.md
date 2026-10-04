@@ -413,3 +413,15 @@ Short, plain-English definitions for terms used in the app and research handbook
 **Solana Tracker:** A commercial indexed Solana data provider. Its normalized fields can accelerate research, but critical events and proprietary risk labels require chain validation and attribution.
 
 **X API:** X's official developer interface for post counts, search, and streams, subject to credentials, product access, cost, and content-use terms.
+# Paper-copy experiment terms · 5 October 2026
+
+- **Paper copy:** simulate buying after a watched wallet buys, without sending money.
+- **Backfill:** retrieve past records and save them locally.
+- **Cash-leg proxy:** infer trade size from the payment-token transfers in a receipt; it may not equal every fee charged to the trader.
+- **Pool event replay:** rebuild past prices and liquidity from the pool's recorded swaps and liquidity changes.
+- **Tick crossing:** a trade moves beyond a liquidity-price boundary; pricing it needs the liquidity beyond that boundary too.
+- **Pool hook:** extra contract rules attached to a pool that can change trading behaviour or charges.
+- **Conditional return:** profit under stated simulation assumptions; executable profit has not been verified.
+- **Unresolved exit:** a simulated entry exists, but evidence is insufficient to calculate its sale.
+- **Embargo:** keep trades whose future outcome overlaps the comparison period out of the earlier-period evaluation.
+- **Selection bias:** the watched-wallet list was chosen later and may favour survivors or already successful traders.

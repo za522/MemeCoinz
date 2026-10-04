@@ -45,7 +45,7 @@ It is not an automatic trader or evidence of a profitable strategy.
 - Telegram delivery is disabled and unconfigured in the current environment; without a real matured cohort and matching validated artifact, there are no eligible predictions to send.
 - No browser settings surface or background scheduler currently operates the alert runner.
 - The manual pipeline endpoint is request-driven, capped at 10 coins, and not a continuous collector or cron job.
-- No wallet connection, paper portfolio, trade submission, or automatic trading.
+- No wallet connection, in-app paper portfolio, trade submission, or automatic trading. The separate offline paper-copy experiment below models conditional scenarios only.
 - Pump.fun consumer pages, Fomo.family, Photon MemeScope, and memescope.net are not scraped.
 
 ## Run locally
@@ -68,6 +68,16 @@ The collector writes a checkpoint under `.research/`, never calls metered provid
 ## Offline fast-graduation baseline
 
 The completed experiment, exact metrics, source hashes, and limitations are in [docs/12-fast-graduation-baseline.md](docs/12-fast-graduation-baseline.md). The executable study is `scripts/train_fast_graduation_baseline.py`; machine-readable outputs are under `research/fast-graduation-baseline/`.
+
+## Offline historical trader-copy experiment
+
+[docs/13-paper-copy-backtest.md](docs/13-paper-copy-backtest.md) describes the free Robinhood Chain collector and historical paper-copy backtester. It reuses Fomopulse's public wallet roster, saves real transaction/pool evidence locally, and compares copying all buys, unusually large buys, and multiple-wallet buying across delay, size and cost scenarios. It does not sign transactions, scrape Fomo, install a live monitor, or certify profitable execution. Raw evidence stays under `.research/`; small reproducible results are under `research/paper-copy-backtest/`.
+
+```sh
+python3 scripts/paper_copy.py collect --roster /absolute/path/to/fomopulse/config/wallets.json
+python3 scripts/paper_copy.py backtest
+python3 -m unittest discover -s tests -p test_paper_copy.py -v
+```
 
 ## Server configuration
 

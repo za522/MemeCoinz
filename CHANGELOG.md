@@ -4,6 +4,8 @@ User-visible project changes are recorded here.
 
 ## Unreleased
 
+- 5 October 2026: Added a credential-free Robinhood Chain historical collector and conditional paper-copy backtester using Fomopulse's public wallet roster. It saves raw evidence, excludes handouts/ambiguous cash attribution, reconstructs historical pool state, compares copy-all/large-buy/multiple-wallet rules, and exports every rejection and unresolved exit. Cost/delay assumptions and unsupported hook/tick execution are explicit; no validated profit label, live prediction or continuous hosted collector is claimed. See `docs/13-paper-copy-backtest.md` and the run-specific `REPORT.md` for actual counts and results.
+
 - Added a reproducible import path for the corrected CC-BY-4.0 RED-PUMP-2026-v1 corpus, covering 860,194 unique launches from 8 May to 10 June 2026.
 - Added a compact D1 cohort index, private hash-verified R2 source storage, exact-count finalization, and a public paginated cohort/status API.
 - Added an unlinked private operator upload surface so an authenticated owner can stream the frozen files into an owner-only deployment without making the site public.
